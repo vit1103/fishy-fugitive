@@ -1,6 +1,23 @@
 
 import Phaser from 'phaser';
-import { GAME_SPEED, HOOK_SPAWN_MIN, HOOK_SPAWN_MAX, DIFFICULTY_INCREASE_INTERVAL, DIFFICULTY_INCREASE_AMOUNT } from '../config';
+import { 
+  GAME_SPEED, 
+  HOOK_SPAWN_MIN, 
+  HOOK_SPAWN_MAX, 
+  DIFFICULTY_INCREASE_INTERVAL, 
+  DIFFICULTY_INCREASE_AMOUNT,
+  FISHERMAN_MOVEMENT_SPEED,
+  HOOK_PULL_SPEED_MIN,
+  HOOK_PULL_SPEED_MAX,
+  formatTime
+} from '../config';
+
+interface FishermanWithBoat {
+  boat: Phaser.GameObjects.Image;
+  fisherman: Phaser.GameObjects.Image;
+  direction: number;
+  targetX?: number;
+}
 
 export class MainScene extends Phaser.Scene {
   private fish!: Phaser.Physics.Arcade.Sprite;
@@ -14,10 +31,13 @@ export class MainScene extends Phaser.Scene {
   private gameActive: boolean = true;
   private waterLevel: number = 0;
   private skyHeight: number = 0;
-  private boatGroup!: Phaser.GameObjects.Group;
+  private fishermen: FishermanWithBoat[] = [];
   private seabed!: Phaser.GameObjects.TileSprite;
   private waveGraphics!: Phaser.GameObjects.Graphics;
   private clouds: Phaser.GameObjects.Image[] = [];
+  private startTime: number = 0;
+  private elapsedTime: number = 0;
+  private timerText!: Phaser.GameObjects.Text;
 
   constructor() {
     super('MainScene');
@@ -38,6 +58,7 @@ export class MainScene extends Phaser.Scene {
     this.score = 0;
     this.gameSpeed = GAME_SPEED;
     this.lastDifficultyIncrease = 0;
+    this.startTime = Date.now();
     
     // Set water level to half screen
     this.waterLevel = this.cameras.main.height / 2;
@@ -70,6 +91,25 @@ export class MainScene extends Phaser.Scene {
     // Setup the world bounds - restrict fish to water area
     this.physics.world.setBounds(0, this.waterLevel, this.cameras.main.width, this.cameras.main.height - this.waterLevel);
 
+    // Create timer text
+    this.timerText = this.add.text(this.cameras.main.width - 150, 20, '0:00', {
+      fontSize: '24px',
+      color: '#FFFFFF',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    });
+    this.timerText.setScrollFactor(0);
+    this.timerText.setDepth(100);
+
+    // Update timer
+    this.time.addEvent({
+      delay: 100,
+      callback: this.updateTimer,
+      callbackScope: this,
+      loop: true
+    });
+
     // Start the game
     this.time.addEvent({
       delay: 100,
@@ -80,6 +120,13 @@ export class MainScene extends Phaser.Scene {
 
     // Dispatch initial score
     window.dispatchEvent(new CustomEvent('score-update', { detail: this.score }));
+  }
+
+  updateTimer() {
+    if (!this.gameActive) return;
+    
+    this.elapsedTime = Date.now() - this.startTime;
+    this.timerText.setText(formatTime(this.elapsedTime));
   }
 
   createBackground() {
@@ -152,18 +199,21 @@ export class MainScene extends Phaser.Scene {
   }
 
   createBoatAndFisherman() {
-    this.boatGroup = this.add.group();
+    this.fishermen = [];
     
-    // Create multiple boats
+    // Create multiple boats with fishermen
     for (let i = 0; i < 3; i++) {
       const x = 200 + i * 300;
       const boat = this.add.image(x, this.waterLevel - 20, 'boat');
       const fisherman = this.add.image(x - 20, this.waterLevel - 60, 'fisherman');
       fisherman.setScale(0.8);
       
-      // Group them together
-      this.boatGroup.add(boat);
-      this.boatGroup.add(fisherman);
+      // Store fisherman and boat together with movement properties
+      this.fishermen.push({
+        boat,
+        fisherman,
+        direction: Phaser.Math.Between(0, 1) ? 1 : -1
+      });
       
       // Add slight bobbing animation to boats
       this.tweens.add({
@@ -228,6 +278,9 @@ export class MainScene extends Phaser.Scene {
       this.fish.setVelocityY(0);
     }
 
+    // Move fishermen
+    this.updateFishermen(delta);
+
     // Spawn hooks
     if (time > this.nextHookTime) {
       this.spawnHook();
@@ -237,11 +290,22 @@ export class MainScene extends Phaser.Scene {
     // Update hook positions
     this.hooks.getChildren().forEach((hook: Phaser.GameObjects.GameObject) => {
       const h = hook as Phaser.Physics.Arcade.Sprite;
-      h.x -= this.gameSpeed * (delta / 1000);
       
-      // Remove hooks that have gone off screen
-      if (h.x < -h.width) {
-        h.destroy();
+      // If the hook has a data value for "pulling", process it
+      if (h.getData('pulling') === true) {
+        h.y -= h.getData('pullSpeed') * (delta / 1000);
+        
+        // If the hook reaches the water level, destroy it
+        if (h.y <= this.waterLevel) {
+          h.destroy();
+        }
+      } else {
+        // Move hook with the boat
+        const fishermanIndex = h.getData('fishermanIndex');
+        if (fishermanIndex !== undefined) {
+          const fishermanWithBoat = this.fishermen[fishermanIndex];
+          h.x = fishermanWithBoat.boat.x;
+        }
       }
     });
 
@@ -264,16 +328,54 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  updateFishermen(delta: number) {
+    const width = this.cameras.main.width;
+    
+    this.fishermen.forEach((fishermanWithBoat, index) => {
+      const { boat, fisherman, direction } = fishermanWithBoat;
+      
+      // If the fisherman has a target, move towards it
+      if (fishermanWithBoat.targetX !== undefined) {
+        const diffX = fishermanWithBoat.targetX - boat.x;
+        const moveX = Math.sign(diffX) * FISHERMAN_MOVEMENT_SPEED * (delta / 10);
+        
+        // If we're close enough to the target or have passed it, set a new target
+        if (Math.abs(diffX) < 5 || (diffX > 0 && moveX > diffX) || (diffX < 0 && moveX < diffX)) {
+          fishermanWithBoat.targetX = undefined;
+        } else {
+          // Move towards the target
+          boat.x += moveX;
+          fisherman.x += moveX;
+        }
+      } else {
+        // Sometimes set a random target position or move toward the fish
+        if (Phaser.Math.Between(1, 100) <= 2) {
+          // 30% chance to move toward the fish, 70% chance to move randomly
+          if (Phaser.Math.Between(1, 100) <= 30) {
+            fishermanWithBoat.targetX = Phaser.Math.Clamp(this.fish.x, 100, width - 100);
+          } else {
+            fishermanWithBoat.targetX = Phaser.Math.Between(100, width - 100);
+          }
+        } else {
+          // Move in the current direction
+          boat.x += direction * FISHERMAN_MOVEMENT_SPEED * (delta / 10);
+          fisherman.x += direction * FISHERMAN_MOVEMENT_SPEED * (delta / 10);
+          
+          // Change direction if reaching the edge
+          if ((direction > 0 && boat.x > width - 100) || (direction < 0 && boat.x < 100)) {
+            fishermanWithBoat.direction *= -1;
+          }
+        }
+      }
+    });
+  }
+
   spawnHook() {
-    // Get a random boat to drop the hook from
-    const boats = this.boatGroup.getChildren().filter(child => child.texture.key === 'boat');
+    // Get a random fisherman to drop the hook from
+    const randomIndex = Phaser.Math.Between(0, this.fishermen.length - 1);
+    const fishermanWithBoat = this.fishermen[randomIndex];
     
-    if (boats.length === 0) return;
-    
-    const randomIndex = Phaser.Math.Between(0, boats.length - 1);
-    const boat = boats[randomIndex] as Phaser.GameObjects.Image;
-    
-    const x = boat.x;
+    const x = fishermanWithBoat.boat.x;
     const y = this.waterLevel;
     
     const hook = this.hooks.create(x, y, 'hook') as Phaser.Physics.Arcade.Sprite;
@@ -281,12 +383,25 @@ export class MainScene extends Phaser.Scene {
     hook.setSize(20, 40);
     hook.setOffset(10, 40);
     
+    // Store which fisherman is controlling this hook
+    hook.setData('fishermanIndex', randomIndex);
+    hook.setData('pulling', false);
+    
     // Drop the hook downward with a slight swing
     this.tweens.add({
       targets: hook,
       y: this.waterLevel + Phaser.Math.Between(100, 300),
       duration: 1000,
-      ease: 'Bounce.easeOut'
+      ease: 'Bounce.easeOut',
+      onComplete: () => {
+        // After a random time, pull the hook back up
+        this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => {
+          if (hook.active) {
+            hook.setData('pulling', true);
+            hook.setData('pullSpeed', Phaser.Math.Between(HOOK_PULL_SPEED_MIN, HOOK_PULL_SPEED_MAX));
+          }
+        });
+      }
     });
   }
 
@@ -316,12 +431,13 @@ export class MainScene extends Phaser.Scene {
     this.hooks.getChildren().forEach((hook: Phaser.GameObjects.GameObject) => {
       const h = hook as Phaser.Physics.Arcade.Sprite;
       h.setVelocity(0);
+      h.setData('pulling', false);
     });
     
     // Trigger game over after a short delay
     this.time.delayedCall(1000, () => {
-      window.dispatchEvent(new CustomEvent('game-over', { detail: this.score }));
-      this.scene.start('GameOverScene', { score: this.score });
+      window.dispatchEvent(new CustomEvent('game-over', { detail: { score: this.score, time: this.elapsedTime } }));
+      this.scene.start('GameOverScene', { score: this.score, time: this.elapsedTime });
     });
   }
 
