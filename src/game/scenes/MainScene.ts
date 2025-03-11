@@ -95,8 +95,21 @@ export class MainScene extends Phaser.Scene {
     this.createBoatAndFisherman();
 
     // Setup collisions
-    this.physics.add.overlap(this.fish, this.hooks, this.handleCollision, undefined, this);
-    this.physics.add.overlap(this.fish, this.obstacles, this.handleCollision, undefined, this);
+    this.physics.add.overlap(
+      this.fish, 
+      this.hooks, 
+      this.handleCollision, 
+      undefined, 
+      this
+    );
+    
+    this.physics.add.overlap(
+      this.fish, 
+      this.obstacles, 
+      this.handleCollision, 
+      undefined, 
+      this
+    );
 
     // Setup input
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -391,7 +404,8 @@ export class MainScene extends Phaser.Scene {
     const controlPointX = (fishermanWithBoat.fisherman.x + hook.x) / 2;
     const controlPointY = Math.min(fishermanWithBoat.fisherman.y, hook.y) - 20;
     
-    fishermanWithBoat.ropeGraphics.quadraticCurveTo(controlPointX, controlPointY, hook.x, hook.y - 20);
+    // Draw a simple line instead
+    fishermanWithBoat.ropeGraphics.lineTo(hook.x, hook.y - 20);
     fishermanWithBoat.ropeGraphics.stroke();
   }
 
@@ -507,7 +521,8 @@ export class MainScene extends Phaser.Scene {
     obstacle.setData('type', obstacleType);
   }
 
-  handleCollision(fish: Phaser.GameObjects.GameObject, obstacle: Phaser.GameObjects.GameObject) {
+  handleCollision(object1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
+                 object2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
     if (!this.gameActive) return;
     
     this.gameActive = false;
@@ -535,8 +550,16 @@ export class MainScene extends Phaser.Scene {
     
     // Trigger game over after a short delay
     this.time.delayedCall(1000, () => {
-      window.dispatchEvent(new CustomEvent('game-over', { detail: { score: this.score, time: this.elapsedTime } }));
-      this.scene.start('GameOverScene', { score: this.score, time: this.elapsedTime });
+      window.dispatchEvent(new CustomEvent('game-over', { 
+        detail: { 
+          score: this.score, 
+          time: this.elapsedTime 
+        } 
+      }));
+      this.scene.start('GameOverScene', { 
+        score: this.score, 
+        time: this.elapsedTime 
+      });
     });
   }
 
