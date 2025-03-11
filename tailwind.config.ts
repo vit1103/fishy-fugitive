@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,16 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Game specific colors
+				ocean: {
+					light: '#A3D9FF',
+					DEFAULT: '#0078D7',
+					deep: '#005999'
+				},
+				fish: {
+					body: '#FF9E2C',
+					fins: '#FF6B2C'
 				}
 			},
 			borderRadius: {
@@ -84,11 +95,36 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'swim': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-10px)' }
+				},
+				'wave': {
+					'0%': { transform: 'translateX(0)' },
+					'100%': { transform: 'translateX(-100%)' }
+				},
+				'bubble-rise': {
+					'0%': { transform: 'translateY(0)', opacity: '1' },
+					'100%': { transform: 'translateY(-100vh)', opacity: '0' }
+				},
+				'fade-in': {
+					'0%': { opacity: '0' },
+					'100%': { opacity: '1' }
+				},
+				'scale-up': {
+					'0%': { transform: 'scale(0.8)', opacity: '0' },
+					'100%': { transform: 'scale(1)', opacity: '1' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'swim': 'swim 3s ease-in-out infinite',
+				'wave': 'wave 20s linear infinite',
+				'bubble-rise': 'bubble-rise 15s linear infinite',
+				'fade-in': 'fade-in 0.5s ease-out',
+				'scale-up': 'scale-up 0.3s ease-out'
 			}
 		}
 	},

@@ -1,10 +1,11 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 100% 98%;
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -13,7 +14,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 210 100% 50%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -35,19 +36,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -96,6 +90,25 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-ocean-light text-foreground font-sans overflow-hidden;
+  }
+
+  /* Game specific styles */
+  .bubble {
+    @apply absolute rounded-full bg-white/20 animate-bubble-rise;
+    animation-duration: calc(10s + (var(--random) * 10s));
+    animation-delay: calc(var(--random) * -10s);
+    left: calc(var(--random) * 100%);
+    width: calc(10px + var(--random) * 30px);
+    height: calc(10px + var(--random) * 30px);
+  }
+
+  .fish-container {
+    @apply animate-swim;
+  }
+
+  .wave {
+    @apply absolute bottom-0 w-[200%] h-20 animate-wave;
+    background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.2));
   }
 }
