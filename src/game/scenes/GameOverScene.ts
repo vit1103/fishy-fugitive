@@ -4,7 +4,7 @@ import { saveToLeaderboard } from '../config';
 
 export class GameOverScene extends Phaser.Scene {
   private score: number = 0;
-  private time: number = 0;
+  private elapsedTime: number = 0;
 
   constructor() {
     super('GameOverScene');
@@ -12,10 +12,10 @@ export class GameOverScene extends Phaser.Scene {
 
   init(data: { score: number, time: number }) {
     this.score = data.score;
-    this.time = data.time;
+    this.elapsedTime = data.time;
     
     // Save to leaderboard
-    saveToLeaderboard(this.time);
+    saveToLeaderboard(this.elapsedTime);
   }
 
   create() {
@@ -23,7 +23,7 @@ export class GameOverScene extends Phaser.Scene {
     window.dispatchEvent(new CustomEvent('game-over', { 
       detail: { 
         score: this.score, 
-        time: this.time 
+        time: this.elapsedTime 
       } 
     }));
   }

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import { MainScene } from './scenes/MainScene';
@@ -21,14 +20,12 @@ const FishyEscape: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Load leaderboard on component mount
     setLeaderboard(getLeaderboard());
   }, []);
 
   useEffect(() => {
     if (!gameStarted) return;
     
-    // Create game instance
     if (containerRef.current && !gameRef.current) {
       const config = {
         ...gameConfig,
@@ -38,7 +35,6 @@ const FishyEscape: React.FC = () => {
 
       gameRef.current = new Phaser.Game(config);
 
-      // Event listeners
       const handleScoreUpdate = (event: CustomEvent) => {
         setScore(event.detail);
       };
@@ -48,14 +44,12 @@ const FishyEscape: React.FC = () => {
         setGameOver(true);
         setScore(score);
         setTime(time);
-        setLeaderboard(getLeaderboard()); // Refresh leaderboard
+        setLeaderboard(getLeaderboard());
       };
 
-      // Register event listeners
       window.addEventListener('score-update', handleScoreUpdate as EventListener);
       window.addEventListener('game-over', handleGameOver as EventListener);
 
-      // Cleanup
       return () => {
         window.removeEventListener('score-update', handleScoreUpdate as EventListener);
         window.removeEventListener('game-over', handleGameOver as EventListener);
@@ -93,7 +87,6 @@ const FishyEscape: React.FC = () => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gradient-to-b from-ocean-light to-ocean-deep">
-      {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: 15 }).map((_, i) => (
           <div 
@@ -109,7 +102,6 @@ const FishyEscape: React.FC = () => {
         <div className="wave" style={{ animationDelay: '-10s' }} />
       </div>
 
-      {/* Score display */}
       {gameStarted && !gameOver && (
         <div className="absolute top-4 left-0 right-0 flex justify-center z-10">
           <div className="bg-white/10 backdrop-blur-sm rounded-full px-6 py-2 text-white font-bold text-lg animate-fade-in">
@@ -118,14 +110,12 @@ const FishyEscape: React.FC = () => {
         </div>
       )}
 
-      {/* Game container */}
       <div 
         ref={containerRef} 
         className="w-full h-full"
         style={{ display: gameStarted ? 'block' : 'none' }}
       />
 
-      {/* Start screen */}
       {!gameStarted && !gameOver && (
         <div className="absolute inset-0 flex items-center justify-center">
           <Card className="w-[90%] max-w-md bg-white/10 backdrop-blur-md border-white/20 shadow-xl animate-scale-up">
@@ -185,7 +175,6 @@ const FishyEscape: React.FC = () => {
         </div>
       )}
 
-      {/* Game over screen */}
       {gameOver && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <Card className="w-[90%] max-w-md bg-white/10 backdrop-blur-md border-white/20 shadow-xl animate-scale-up">
@@ -260,6 +249,19 @@ const FishyEscape: React.FC = () => {
               )}
             </div>
           </Card>
+        </div>
+      )}
+
+      {gameStarted && gameOver && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-auto z-20">
+          <Button
+            onClick={handleRestartGame}
+            className="bg-ocean-deep hover:bg-ocean text-white border-none px-8 py-6 text-xl rounded-full transition-all duration-300 hover:scale-105 shadow-xl animate-pulse"
+            size="lg"
+          >
+            <RefreshCw size={24} className="mr-2" />
+            Restart Game
+          </Button>
         </div>
       )}
     </div>

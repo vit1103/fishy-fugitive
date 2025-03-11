@@ -1,4 +1,3 @@
-
 import Phaser from 'phaser';
 import { 
   GAME_SPEED, 
@@ -17,11 +16,18 @@ interface FishermanWithBoat {
   fisherman: Phaser.GameObjects.Image;
   direction: number;
   targetX?: number;
+  ropeGraphics?: Phaser.GameObjects.Graphics;
+}
+
+interface Obstacle {
+  sprite: Phaser.Physics.Arcade.Sprite;
+  type: 'coral' | 'stone' | 'plant';
 }
 
 export class MainScene extends Phaser.Scene {
   private fish!: Phaser.Physics.Arcade.Sprite;
   private hooks!: Phaser.Physics.Arcade.Group;
+  private obstacles!: Phaser.Physics.Arcade.Group;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private score: number = 0;
   private scoreText!: Phaser.GameObjects.Text;
@@ -38,6 +44,8 @@ export class MainScene extends Phaser.Scene {
   private startTime: number = 0;
   private elapsedTime: number = 0;
   private timerText!: Phaser.GameObjects.Text;
+  private obstacleTextures: string[] = ['coral', 'stone', 'plant'];
+  private nextObstacleTime: number = 0;
 
   constructor() {
     super('MainScene');
@@ -51,6 +59,9 @@ export class MainScene extends Phaser.Scene {
     this.load.svg('fisherman', '/src/assets/fisherman.svg');
     this.load.svg('seabed', '/src/assets/seabed.svg');
     this.load.svg('cloud', '/src/assets/cloud.svg');
+    this.load.svg('coral', '/src/assets/coral.svg');
+    this.load.svg('stone', '/src/assets/stone.svg');
+    this.load.svg('plant', '/src/assets/plant.svg');
   }
 
   create() {
@@ -76,12 +87,16 @@ export class MainScene extends Phaser.Scene {
 
     // Create hooks group
     this.hooks = this.physics.add.group();
+    
+    // Create obstacles group
+    this.obstacles = this.physics.add.group();
 
     // Create the boat and fisherman
     this.createBoatAndFisherman();
 
     // Setup collisions
     this.physics.add.overlap(this.fish, this.hooks, this.handleCollision, undefined, this);
+    this.physics.add.overlap(this.fish, this.obstacles, this.handleCollision, undefined, this);
 
     // Setup input
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -117,6 +132,9 @@ export class MainScene extends Phaser.Scene {
       callbackScope: this,
       loop: true
     });
+
+    // Set the initial time for the first obstacle
+    this.nextObstacleTime = this.time.now + Phaser.Math.Between(1000, 3000);
 
     // Dispatch initial score
     window.dispatchEvent(new CustomEvent('score-update', { detail: this.score }));
@@ -198,36 +216,6 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  createBoatAndFisherman() {
-    this.fishermen = [];
-    
-    // Create multiple boats with fishermen
-    for (let i = 0; i < 3; i++) {
-      const x = 200 + i * 300;
-      const boat = this.add.image(x, this.waterLevel - 20, 'boat');
-      const fisherman = this.add.image(x - 20, this.waterLevel - 60, 'fisherman');
-      fisherman.setScale(0.8);
-      
-      // Store fisherman and boat together with movement properties
-      this.fishermen.push({
-        boat,
-        fisherman,
-        direction: Phaser.Math.Between(0, 1) ? 1 : -1
-      });
-      
-      // Add slight bobbing animation to boats
-      this.tweens.add({
-        targets: [boat, fisherman],
-        y: '+=10',
-        duration: 1500,
-        ease: 'Sine.easeInOut',
-        yoyo: true,
-        repeat: -1,
-        delay: i * 200
-      });
-    }
-  }
-
   drawWaves() {
     if (!this.gameActive) return;
     
@@ -258,14 +246,50 @@ export class MainScene extends Phaser.Scene {
     this.waveGraphics.fill();
   }
 
+  createBoatAndFisherman() {
+    this.fishermen = [];
+    
+    // Create multiple boats with fishermen
+    for (let i = 0; i < 3; i++) {
+      const x = 200 + i * 300;
+      const boat = this.add.image(x, this.waterLevel - 20, 'boat');
+      const fisherman = this.add.image(x - 20, this.waterLevel - 60, 'fisherman');
+      fisherman.setScale(0.8);
+      
+      // Create rope graphics for this fisherman
+      const ropeGraphics = this.add.graphics();
+      
+      // Store fisherman and boat together with movement properties
+      this.fishermen.push({
+        boat,
+        fisherman,
+        direction: Phaser.Math.Between(0, 1) ? 1 : -1,
+        ropeGraphics
+      });
+      
+      // Add slight bobbing animation to boats
+      this.tweens.add({
+        targets: [boat, fisherman],
+        y: '+=10',
+        duration: 1500,
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1,
+        delay: i * 200
+      });
+    }
+  }
+
   update(time: number, delta: number) {
     if (!this.gameActive) return;
 
     // Player movement
     if (this.cursors.left.isDown) {
       this.fish.setVelocityX(-200);
+      this.fish.setFlipX(true);
     } else if (this.cursors.right.isDown) {
       this.fish.setVelocityX(200);
+      this.fish.setFlipX(false);
     } else {
       this.fish.setVelocityX(0);
     }
@@ -286,8 +310,14 @@ export class MainScene extends Phaser.Scene {
       this.spawnHook();
       this.nextHookTime = time + Phaser.Math.Between(HOOK_SPAWN_MIN, HOOK_SPAWN_MAX);
     }
+    
+    // Spawn obstacles
+    if (time > this.nextObstacleTime) {
+      this.spawnObstacle();
+      this.nextObstacleTime = time + Phaser.Math.Between(2000, 4000);
+    }
 
-    // Update hook positions
+    // Update hook positions and draw ropes
     this.hooks.getChildren().forEach((hook: Phaser.GameObjects.GameObject) => {
       const h = hook as Phaser.Physics.Arcade.Sprite;
       
@@ -306,6 +336,20 @@ export class MainScene extends Phaser.Scene {
           const fishermanWithBoat = this.fishermen[fishermanIndex];
           h.x = fishermanWithBoat.boat.x;
         }
+      }
+      
+      // Draw rope from fisherman to hook
+      this.drawRope(h);
+    });
+    
+    // Move obstacles
+    this.obstacles.getChildren().forEach((obstacle: Phaser.GameObjects.GameObject) => {
+      const obs = obstacle as Phaser.Physics.Arcade.Sprite;
+      obs.x -= this.gameSpeed * (delta / 1000);
+      
+      // If obstacle goes off screen, destroy it
+      if (obs.x < -obs.width) {
+        obs.destroy();
       }
     });
 
@@ -326,6 +370,29 @@ export class MainScene extends Phaser.Scene {
       this.gameSpeed += DIFFICULTY_INCREASE_AMOUNT;
       this.lastDifficultyIncrease = time;
     }
+  }
+
+  drawRope(hook: Phaser.Physics.Arcade.Sprite) {
+    const fishermanIndex = hook.getData('fishermanIndex');
+    if (fishermanIndex === undefined) return;
+    
+    const fishermanWithBoat = this.fishermen[fishermanIndex];
+    if (!fishermanWithBoat.ropeGraphics) return;
+    
+    // Clear previous rope
+    fishermanWithBoat.ropeGraphics.clear();
+    
+    // Draw rope from fisherman to hook
+    fishermanWithBoat.ropeGraphics.lineStyle(2, 0x663300, 1);
+    fishermanWithBoat.ropeGraphics.beginPath();
+    fishermanWithBoat.ropeGraphics.moveTo(fishermanWithBoat.fisherman.x, fishermanWithBoat.fisherman.y + 10);
+    
+    // Add a slight curve to the rope for realism
+    const controlPointX = (fishermanWithBoat.fisherman.x + hook.x) / 2;
+    const controlPointY = Math.min(fishermanWithBoat.fisherman.y, hook.y) - 20;
+    
+    fishermanWithBoat.ropeGraphics.quadraticCurveTo(controlPointX, controlPointY, hook.x, hook.y - 20);
+    fishermanWithBoat.ropeGraphics.stroke();
   }
 
   updateFishermen(delta: number) {
@@ -405,22 +472,54 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  handleCollision() {
+  spawnObstacle() {
+    const height = this.cameras.main.height;
+    const waterDepth = height - this.waterLevel;
+    const maxObstacleHeight = waterDepth * 0.25; // 25% of water height
+    
+    // Choose a random obstacle type
+    const obstacleType = Phaser.Utils.Array.GetRandom(this.obstacleTextures);
+    
+    // Create obstacle at bottom of screen, just off the right edge
+    const x = this.cameras.main.width + 50;
+    const y = height - Phaser.Math.Between(20, maxObstacleHeight);
+    
+    const obstacle = this.obstacles.create(x, y, obstacleType) as Phaser.Physics.Arcade.Sprite;
+    
+    // Adjust scale and physics body based on obstacle type
+    let scale = 0.8;
+    if (obstacleType === 'coral') {
+      scale = Phaser.Math.FloatBetween(0.6, 0.9);
+      obstacle.setSize(50, maxObstacleHeight * scale);
+      obstacle.setOffset(25, 10);
+    } else if (obstacleType === 'stone') {
+      scale = Phaser.Math.FloatBetween(0.5, 0.8);
+      obstacle.setSize(60, maxObstacleHeight * scale);
+      obstacle.setOffset(20, 10);
+    } else if (obstacleType === 'plant') {
+      scale = Phaser.Math.FloatBetween(0.7, 1);
+      obstacle.setSize(40, maxObstacleHeight * scale);
+      obstacle.setOffset(30, 5);
+    }
+    
+    obstacle.setScale(scale);
+    obstacle.setOrigin(0.5, 1); // Set origin to bottom center
+    obstacle.setData('type', obstacleType);
+  }
+
+  handleCollision(fish: Phaser.GameObjects.GameObject, obstacle: Phaser.GameObjects.GameObject) {
     if (!this.gameActive) return;
     
     this.gameActive = false;
     
-    // Create explosion effect
-    const particles = this.add.particles(0, 0, 'bubble', {
-      speed: 100,
-      scale: { start: 0.2, end: 0 },
-      blendMode: 'ADD',
-      lifespan: 1000
-    });
-    
-    particles.createEmitter({
+    // Create bubble effect
+    const particles = this.add.particles('bubble');
+    const emitter = particles.createEmitter({
       x: this.fish.x,
       y: this.fish.y,
+      speed: { min: 50, max: 100 },
+      scale: { start: 0.4, end: 0 },
+      lifespan: 1000,
       quantity: 20
     });
     
