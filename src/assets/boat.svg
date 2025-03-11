@@ -1,0 +1,11 @@
+
+<svg width="200" height="80" viewBox="0 0 200 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Boat body -->
+  <path d="M20 60C20 60 50 70 100 70C150 70 180 60 180 60L160 40H40L20 60Z" fill="#8B4513"/>
+  <!-- Boat deck -->
+  <rect x="40" y="30" width="120" height="10" fill="#A0522D"/>
+  <!-- Boat cabin -->
+  <rect x="70" y="10" width="60" height="20" fill="#D2B48C"/>
+  <!-- Cabin window -->
+  <rect x="85" y="15" width="30" height="10" fill="#87CEEB"/>
+</svg>

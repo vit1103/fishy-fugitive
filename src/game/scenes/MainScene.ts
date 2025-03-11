@@ -12,7 +12,12 @@ export class MainScene extends Phaser.Scene {
   private gameSpeed: number = GAME_SPEED;
   private lastDifficultyIncrease: number = 0;
   private gameActive: boolean = true;
+  private waterLevel: number = 0;
+  private skyHeight: number = 0;
+  private boatGroup!: Phaser.GameObjects.Group;
+  private seabed!: Phaser.GameObjects.TileSprite;
   private waveGraphics!: Phaser.GameObjects.Graphics;
+  private clouds: Phaser.GameObjects.Image[] = [];
 
   constructor() {
     super('MainScene');
@@ -22,6 +27,10 @@ export class MainScene extends Phaser.Scene {
     this.load.svg('fish', '/src/assets/fish.svg');
     this.load.svg('hook', '/src/assets/hook.svg');
     this.load.svg('bubble', '/src/assets/bubble.svg');
+    this.load.svg('boat', '/src/assets/boat.svg');
+    this.load.svg('fisherman', '/src/assets/fisherman.svg');
+    this.load.svg('seabed', '/src/assets/seabed.svg');
+    this.load.svg('cloud', '/src/assets/cloud.svg');
   }
 
   create() {
@@ -29,12 +38,16 @@ export class MainScene extends Phaser.Scene {
     this.score = 0;
     this.gameSpeed = GAME_SPEED;
     this.lastDifficultyIncrease = 0;
+    
+    // Set water level to half screen
+    this.waterLevel = this.cameras.main.height / 2;
+    this.skyHeight = this.waterLevel;
 
     // Create background
     this.createBackground();
 
     // Create fish
-    this.fish = this.physics.add.sprite(100, this.cameras.main.height / 2, 'fish');
+    this.fish = this.physics.add.sprite(100, this.waterLevel + 100, 'fish');
     this.fish.setCollideWorldBounds(true);
     this.fish.setScale(0.7);
     this.fish.setSize(60, 30);
@@ -42,6 +55,9 @@ export class MainScene extends Phaser.Scene {
 
     // Create hooks group
     this.hooks = this.physics.add.group();
+
+    // Create the boat and fisherman
+    this.createBoatAndFisherman();
 
     // Setup collisions
     this.physics.add.overlap(this.fish, this.hooks, this.handleCollision, undefined, this);
@@ -51,8 +67,8 @@ export class MainScene extends Phaser.Scene {
     this.input.on('pointerdown', this.handlePointerDown, this);
     this.input.on('pointermove', this.handlePointerMove, this);
 
-    // Setup the world bounds
-    this.physics.world.setBounds(0, 0, this.cameras.main.width, this.cameras.main.height);
+    // Setup the world bounds - restrict fish to water area
+    this.physics.world.setBounds(0, this.waterLevel, this.cameras.main.width, this.cameras.main.height - this.waterLevel);
 
     // Start the game
     this.time.addEvent({
@@ -67,10 +83,44 @@ export class MainScene extends Phaser.Scene {
   }
 
   createBackground() {
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+
+    // Create sky
+    const sky = this.add.rectangle(0, 0, width, this.skyHeight, 0x87CEEB);
+    sky.setOrigin(0, 0);
+
+    // Add clouds
+    for (let i = 0; i < 5; i++) {
+      const cloud = this.add.image(
+        Phaser.Math.Between(0, width),
+        Phaser.Math.Between(20, this.skyHeight - 50),
+        'cloud'
+      );
+      cloud.setScale(Phaser.Math.FloatBetween(0.5, 1.2));
+      cloud.setAlpha(0.9);
+      
+      this.clouds.push(cloud);
+    }
+
+    // Create water
+    const water = this.add.rectangle(0, this.waterLevel, width, height - this.waterLevel, 0x0078D7);
+    water.setOrigin(0, 0);
+
+    // Create seabed
+    this.seabed = this.add.tileSprite(
+      0, 
+      height, 
+      width, 
+      200, 
+      'seabed'
+    );
+    this.seabed.setOrigin(0, 1);
+
     // Create animated water particles
     for (let i = 0; i < 30; i++) {
-      const x = Phaser.Math.Between(0, this.cameras.main.width);
-      const y = Phaser.Math.Between(0, this.cameras.main.height);
+      const x = Phaser.Math.Between(0, width);
+      const y = Phaser.Math.Between(this.waterLevel, height);
       const bubble = this.add.image(x, y, 'bubble');
       bubble.setAlpha(0.3);
       bubble.setScale(Phaser.Math.FloatBetween(0.3, 1));
@@ -83,8 +133,8 @@ export class MainScene extends Phaser.Scene {
         duration: Phaser.Math.Between(3000, 8000),
         ease: 'Linear',
         onComplete: () => {
-          bubble.y = this.cameras.main.height + 20;
-          bubble.x = Phaser.Math.Between(0, this.cameras.main.width);
+          bubble.y = height + 20;
+          bubble.x = Phaser.Math.Between(0, width);
           bubble.alpha = 0.3;
         },
         repeat: -1
@@ -101,33 +151,59 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
+  createBoatAndFisherman() {
+    this.boatGroup = this.add.group();
+    
+    // Create multiple boats
+    for (let i = 0; i < 3; i++) {
+      const x = 200 + i * 300;
+      const boat = this.add.image(x, this.waterLevel - 20, 'boat');
+      const fisherman = this.add.image(x - 20, this.waterLevel - 60, 'fisherman');
+      fisherman.setScale(0.8);
+      
+      // Group them together
+      this.boatGroup.add(boat);
+      this.boatGroup.add(fisherman);
+      
+      // Add slight bobbing animation to boats
+      this.tweens.add({
+        targets: [boat, fisherman],
+        y: '+=10',
+        duration: 1500,
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1,
+        delay: i * 200
+      });
+    }
+  }
+
   drawWaves() {
     if (!this.gameActive) return;
     
     this.waveGraphics.clear();
     const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
     
     this.waveGraphics.fillStyle(0x0067BE, 0.3);
-    this.waveGraphics.fillRect(0, height - 30, width, 30);
+    this.waveGraphics.fillRect(0, this.waterLevel - 10, width, 20);
     
     this.waveGraphics.fillStyle(0x0056A0, 0.2);
     
-    // Draw animated wave
+    // Draw animated wave at water level
     this.waveGraphics.beginPath();
     const time = this.time.now / 1000;
     let x = 0;
-    const waveHeight = 15;
+    const waveHeight = 8;
     const frequency = 20;
     
-    this.waveGraphics.moveTo(0, height);
+    this.waveGraphics.moveTo(0, this.waterLevel + 5);
     while (x < width) {
-      const y = height - waveHeight + Math.sin((x + time) / frequency) * waveHeight;
+      const y = this.waterLevel + Math.sin((x + time) / frequency) * waveHeight;
       this.waveGraphics.lineTo(x, y);
       x += 10;
     }
-    this.waveGraphics.lineTo(width, height);
-    this.waveGraphics.lineTo(0, height);
+    this.waveGraphics.lineTo(width, this.waterLevel + 15);
+    this.waveGraphics.lineTo(0, this.waterLevel + 15);
     this.waveGraphics.closePath();
     this.waveGraphics.fill();
   }
@@ -169,6 +245,18 @@ export class MainScene extends Phaser.Scene {
       }
     });
 
+    // Move clouds
+    this.clouds.forEach(cloud => {
+      cloud.x -= (this.gameSpeed * 0.2) * (delta / 1000);
+      if (cloud.x < -cloud.width) {
+        cloud.x = this.cameras.main.width + cloud.width;
+        cloud.y = Phaser.Math.Between(20, this.skyHeight - 50);
+      }
+    });
+
+    // Move seabed
+    this.seabed.tilePositionX += this.gameSpeed * 0.1 * (delta / 1000);
+
     // Increase difficulty over time
     if (time > this.lastDifficultyIncrease + DIFFICULTY_INCREASE_INTERVAL) {
       this.gameSpeed += DIFFICULTY_INCREASE_AMOUNT;
@@ -177,13 +265,29 @@ export class MainScene extends Phaser.Scene {
   }
 
   spawnHook() {
-    const x = this.cameras.main.width + 100;
-    const y = Phaser.Math.Between(50, this.cameras.main.height * 0.8);
+    // Get a random boat to drop the hook from
+    const boats = this.boatGroup.getChildren().filter(child => child.texture.key === 'boat');
+    
+    if (boats.length === 0) return;
+    
+    const randomIndex = Phaser.Math.Between(0, boats.length - 1);
+    const boat = boats[randomIndex] as Phaser.GameObjects.Image;
+    
+    const x = boat.x;
+    const y = this.waterLevel;
     
     const hook = this.hooks.create(x, y, 'hook') as Phaser.Physics.Arcade.Sprite;
     hook.setScale(0.8);
     hook.setSize(20, 40);
     hook.setOffset(10, 40);
+    
+    // Drop the hook downward with a slight swing
+    this.tweens.add({
+      targets: hook,
+      y: this.waterLevel + Phaser.Math.Between(100, 300),
+      duration: 1000,
+      ease: 'Bounce.easeOut'
+    });
   }
 
   handleCollision() {
@@ -236,6 +340,9 @@ export class MainScene extends Phaser.Scene {
 
   handlePointerMove(pointer: Phaser.Input.Pointer) {
     if (pointer.isDown && this.gameActive) {
+      // Only respond to touches below the water level
+      if (pointer.y < this.waterLevel) return;
+      
       const targetX = pointer.x;
       const targetY = pointer.y;
       
