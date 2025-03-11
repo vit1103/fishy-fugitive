@@ -527,15 +527,30 @@ export class MainScene extends Phaser.Scene {
     
     this.gameActive = false;
     
-    // Create bubble effect
-    const particles = this.add.particles('bubble');
-    const emitter = particles.createEmitter({
-      x: this.fish.x,
-      y: this.fish.y,
-      speed: { min: 50, max: 100 },
-      scale: { start: 0.4, end: 0 },
-      lifespan: 1000,
-      quantity: 20
+    // Create bubble effect - fixing the particle emitter issue
+    const bubbles = this.add.group({
+      key: 'bubble',
+      repeat: 20,
+      setXY: { x: this.fish.x, y: this.fish.y, stepX: 0 }
+    });
+    
+    bubbles.children.iterate((bubble: any) => {
+      const dx = Phaser.Math.Between(-100, 100);
+      const dy = Phaser.Math.Between(-100, 100);
+      const scale = Phaser.Math.FloatBetween(0.2, 0.6);
+      
+      bubble.setScale(scale);
+      this.tweens.add({
+        targets: bubble,
+        x: bubble.x + dx,
+        y: bubble.y + dy,
+        alpha: 0,
+        scale: 0,
+        duration: 1000,
+        ease: 'Power2'
+      });
+      
+      return true;
     });
     
     // Hide the fish
@@ -605,3 +620,4 @@ export class MainScene extends Phaser.Scene {
     }
   }
 }
+
