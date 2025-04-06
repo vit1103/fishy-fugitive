@@ -8,7 +8,7 @@ export class PowerUpManager {
   private waterLevel: number;
   private gameSpeed: number;
   private lastPowerUpTime: number = 0;
-  private powerUpInterval: number = 10000; // 10 seconds
+  private powerUpInterval: number = 7000; // Reduced from 10000 to 7000ms for more frequent power-ups
   private activePowerUps: ActivePowerUp[] = [];
   private statusIndicator: Phaser.GameObjects.Container;
 
@@ -43,8 +43,8 @@ export class PowerUpManager {
     if (time > this.lastPowerUpTime + this.powerUpInterval) {
       this.lastPowerUpTime = time;
       
-      // Random chance (50%) to spawn a power-up
-      if (Math.random() > 0.5) {
+      // Increased chance (70%) to spawn a power-up (was 50%)
+      if (Math.random() > 0.3) {
         // Randomly choose power-up type with equal probability
         const randomValue = Math.random();
         let type: 'speed' | 'invincibility' | 'eat';

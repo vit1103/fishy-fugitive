@@ -18,7 +18,8 @@ const assetPaths = {
   seagull: '/src/assets/seagull.svg',
   powerupSpeed: '/src/assets/powerup-speed.svg',
   powerupInvincibility: '/src/assets/powerup-invincibility.svg',
-  powerupEat: '/src/assets/powerup-eat.svg'
+  powerupEat: '/src/assets/powerup-eat.svg',
+  backgroundMusic: '/src/assets/background-music.mp3'
 };
 
 export default assetPaths;

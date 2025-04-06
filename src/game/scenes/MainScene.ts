@@ -34,6 +34,9 @@ export class MainScene extends Phaser.Scene {
   private isInvincible: boolean = false;
   private speedMultiplier: number = 1;
   private canEatObstacles: boolean = false;
+  private coralsEaten: number = 0;
+  private fishSize: number = 0.7;
+  private backgroundMusic!: Phaser.Sound.BaseSound;
   
   // Component managers
   private background!: Background;
@@ -53,6 +56,9 @@ export class MainScene extends Phaser.Scene {
     Object.entries(assetPaths).forEach(([key, path]) => {
       this.load.image(key, path);
     });
+    
+    // Load background music
+    this.load.audio('background-music', '/src/assets/background-music.mp3');
   }
 
   create() {
@@ -64,6 +70,15 @@ export class MainScene extends Phaser.Scene {
     this.isInvincible = false;
     this.speedMultiplier = 1;
     this.canEatObstacles = false;
+    this.coralsEaten = 0;
+    this.fishSize = 0.7;
+    
+    // Play background music
+    this.backgroundMusic = this.sound.add('background-music', {
+      volume: 0.5,
+      loop: true
+    });
+    this.backgroundMusic.play();
     
     this.waterLevel = this.cameras.main.height / 2;
     
@@ -75,7 +90,7 @@ export class MainScene extends Phaser.Scene {
     // Create the player fish
     this.fish = this.physics.add.sprite(100, this.waterLevel + 100, 'fish');
     this.fish.setCollideWorldBounds(true);
-    this.fish.setScale(0.7);
+    this.fish.setScale(this.fishSize);
     this.fish.setSize(60, 30);
     this.fish.setOffset(30, 15);
 
@@ -243,6 +258,30 @@ export class MainScene extends Phaser.Scene {
         }
       });
       
+      // Track corals eaten (only count if it's a coral)
+      if (obstacle.getData('type') === 'coral') {
+        this.coralsEaten++;
+        
+        // Check if fish should grow
+        if (this.coralsEaten >= 5) {
+          this.coralsEaten = 0;
+          this.fishSize += 0.1;
+          this.fish.setScale(this.fishSize);
+          
+          // Visual effect for growth
+          const growthEffect = this.add.circle(this.fish.x, this.fish.y, 50, 0xffffff, 0.5);
+          this.tweens.add({
+            targets: growthEffect,
+            scale: 2,
+            alpha: 0,
+            duration: 800,
+            onComplete: () => {
+              growthEffect.destroy();
+            }
+          });
+        }
+      }
+      
       // Add small score bonus for eating obstacles
       this.score += 10;
       window.dispatchEvent(new CustomEvent('score-update', { detail: this.score }));
@@ -259,12 +298,8 @@ export class MainScene extends Phaser.Scene {
                          object2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
     if (!this.gameActive || this.isInvincible) return;
     
-    const seagull = object2 as Phaser.Physics.Arcade.Sprite;
-    
-    // Only collide if seagull is diving into the water
-    if (seagull.y > this.waterLevel) {
-      this.gameOver();
-    }
+    // Game over when hitting a seagull
+    this.gameOver();
   }
 
   handlePowerUpCollision(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
@@ -289,6 +324,9 @@ export class MainScene extends Phaser.Scene {
   
   gameOver() {
     this.gameActive = false;
+    
+    // Stop the background music
+    this.backgroundMusic.stop();
     
     const bubbles = this.add.group({
       key: 'bubble',
