@@ -3,8 +3,7 @@ import Phaser from 'phaser';
 import { 
   GAME_SPEED, 
   DIFFICULTY_INCREASE_INTERVAL, 
-  DIFFICULTY_INCREASE_AMOUNT,
-  formatTime
+  DIFFICULTY_INCREASE_AMOUNT
 } from '../config';
 import { Background } from '../components/Background';
 import { Fishermen } from '../components/Fishermen';
@@ -13,6 +12,9 @@ import { HookManager } from '../components/HookManager';
 import { Celebrations } from '../components/Celebrations';
 import { PowerUpManager } from '../components/PowerUpManager';
 import { SeagullManager } from '../components/SeagullManager';
+import { PlayerController } from '../components/PlayerController';
+import { CollisionHandler } from '../components/CollisionHandler';
+import { GameStateManager } from '../components/GameStateManager';
 import assetPaths from '../assets';
 
 export class MainScene extends Phaser.Scene {
@@ -22,20 +24,9 @@ export class MainScene extends Phaser.Scene {
   private powerUps!: Phaser.Physics.Arcade.Group;
   private seagulls!: Phaser.Physics.Arcade.Group;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private score: number = 0;
-  private scoreText!: Phaser.GameObjects.Text;
   private gameSpeed: number = GAME_SPEED;
   private lastDifficultyIncrease: number = 0;
-  private gameActive: boolean = true;
   private waterLevel: number = 0;
-  private timerText!: Phaser.GameObjects.Text;
-  private startTime: number = 0;
-  private elapsedTime: number = 0;
-  private isInvincible: boolean = false;
-  private speedMultiplier: number = 1;
-  private canEatObstacles: boolean = false;
-  private coralsEaten: number = 0;
-  private fishSize: number = 0.7;
   private backgroundMusic!: Phaser.Sound.BaseSound;
   
   // Component managers
@@ -46,6 +37,9 @@ export class MainScene extends Phaser.Scene {
   private celebrations!: Celebrations;
   private powerUpManager!: PowerUpManager;
   private seagullManager!: SeagullManager;
+  private playerController!: PlayerController;
+  private collisionHandler!: CollisionHandler;
+  private gameStateManager!: GameStateManager;
 
   constructor() {
     super('MainScene');
@@ -62,16 +56,8 @@ export class MainScene extends Phaser.Scene {
   }
 
   create() {
-    this.gameActive = true;
-    this.score = 0;
     this.gameSpeed = GAME_SPEED;
     this.lastDifficultyIncrease = 0;
-    this.startTime = Date.now();
-    this.isInvincible = false;
-    this.speedMultiplier = 1;
-    this.canEatObstacles = false;
-    this.coralsEaten = 0;
-    this.fishSize = 0.7;
     
     // Play background music
     this.backgroundMusic = this.sound.add('background-music', {
@@ -90,7 +76,7 @@ export class MainScene extends Phaser.Scene {
     // Create the player fish
     this.fish = this.physics.add.sprite(100, this.waterLevel + 100, 'fish');
     this.fish.setCollideWorldBounds(true);
-    this.fish.setScale(this.fishSize);
+    this.fish.setScale(0.7);
     this.fish.setSize(60, 30);
     this.fish.setOffset(30, 15);
 
@@ -105,113 +91,44 @@ export class MainScene extends Phaser.Scene {
     this.hookManager = new HookManager(this, this.hooks, this.fishermen, this.waterLevel);
     this.powerUpManager = new PowerUpManager(this, this.powerUps, this.waterLevel, this.gameSpeed);
     this.seagullManager = new SeagullManager(this, this.fish, this.waterLevel);
-
-    // Setup collision detection
-    this.physics.add.overlap(
-      this.fish, 
-      this.hooks, 
-      this.handleHookCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, 
-      undefined, 
-      this
-    );
     
-    this.physics.add.overlap(
-      this.fish, 
-      this.obstacles, 
-      this.handleObstacleCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
-      undefined, 
-      this
-    );
-    
-    this.physics.add.overlap(
-      this.fish, 
-      this.powerUps, 
-      this.handlePowerUpCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
-      undefined, 
-      this
-    );
-    
-    this.physics.add.overlap(
-      this.fish, 
-      this.seagulls, 
-      this.handleSeagullCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
-      undefined, 
-      this
-    );
-
     // Setup input
     this.cursors = this.input.keyboard.createCursorKeys();
-    this.input.on('pointerdown', this.handlePointerDown, this);
-    this.input.on('pointermove', this.handlePointerMove, this);
-
-    // Set physics boundaries
-    this.physics.world.setBounds(0, this.waterLevel, this.cameras.main.width, this.cameras.main.height - this.waterLevel);
-
-    // Create UI
-    this.timerText = this.add.text(this.cameras.main.width - 150, 20, '0:00', {
-      fontSize: '24px',
-      color: '#FFFFFF',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 4
-    });
-    this.timerText.setScrollFactor(0);
-    this.timerText.setDepth(100);
-
-    // Setup timers
-    this.time.addEvent({
-      delay: 100,
-      callback: this.updateTimer,
-      callbackScope: this,
-      loop: true
-    });
-
-    this.time.addEvent({
-      delay: 100,
-      callback: this.updateScore,
-      callbackScope: this,
-      loop: true
-    });
-
-    window.dispatchEvent(new CustomEvent('score-update', { detail: this.score }));
-  }
-
-  updateTimer() {
-    if (!this.gameActive) return;
     
-    this.elapsedTime = Date.now() - this.startTime;
-    this.timerText.setText(formatTime(this.elapsedTime));
+    // Setup physics boundaries
+    this.physics.world.setBounds(0, this.waterLevel, this.cameras.main.width, this.cameras.main.height - this.waterLevel);
+    
+    // Initialize game state manager
+    this.gameStateManager = new GameStateManager(this, this.celebrations);
+    
+    // Initialize player controller
+    this.playerController = new PlayerController(this, this.fish, this.cursors, this.waterLevel);
+    
+    // Initialize collision handler
+    this.collisionHandler = new CollisionHandler(
+      this,
+      this.fish,
+      this.hooks,
+      this.obstacles,
+      this.powerUps,
+      this.seagulls,
+      this.gameOver.bind(this),
+      this.handlePowerUpCollision.bind(this),
+      this.playerController.growFish.bind(this.playerController)
+    );
   }
 
   update(time: number, delta: number) {
-    if (!this.gameActive) return;
+    if (!this.gameStateManager.isGameActive()) return;
 
     // Update power-ups first to get current effects
     const powerUpEffects = this.powerUpManager.update(time, delta, this.fish.body.velocity.length());
-    this.speedMultiplier = powerUpEffects.speedMultiplier;
-    this.isInvincible = powerUpEffects.isInvincible;
-    this.canEatObstacles = powerUpEffects.canEatObstacles;
+    this.playerController.setSpeedMultiplier(powerUpEffects.speedMultiplier);
+    this.collisionHandler.setInvincible(powerUpEffects.isInvincible);
+    this.collisionHandler.setCanEatObstacles(powerUpEffects.canEatObstacles);
 
-    // Handle player fish movement with speed boost applied
-    const baseSpeed = 200 * this.speedMultiplier;
-    
-    if (this.cursors.left.isDown) {
-      this.fish.setVelocityX(-baseSpeed);
-      this.fish.setFlipX(true);
-    } else if (this.cursors.right.isDown) {
-      this.fish.setVelocityX(baseSpeed);
-      this.fish.setFlipX(false);
-    } else {
-      this.fish.setVelocityX(0);
-    }
-
-    if (this.cursors.up.isDown) {
-      this.fish.setVelocityY(-baseSpeed);
-    } else if (this.cursors.down.isDown) {
-      this.fish.setVelocityY(baseSpeed);
-    } else {
-      this.fish.setVelocityY(0);
-    }
+    // Update player movement
+    this.playerController.update();
 
     // Update all game components
     this.background.update(delta);
@@ -230,100 +147,14 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  handleHookCollision(object1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
-                     object2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
-    if (!this.gameActive || this.isInvincible) return;
+  handlePowerUpCollision(player: Phaser.Physics.Arcade.Sprite, powerUp: Phaser.Physics.Arcade.Sprite) {
+    if (!this.gameStateManager.isGameActive()) return;
     
-    this.gameOver();
-  }
-  
-  handleObstacleCollision(object1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
-                         object2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
-    if (!this.gameActive || this.isInvincible) return;
-    
-    const obstacle = object2 as Phaser.Physics.Arcade.Sprite;
-    
-    if (this.canEatObstacles) {
-      // Eat the obstacle!
-      const chomp = this.add.image(obstacle.x, obstacle.y, 'bubble');
-      chomp.setScale(0.5);
-      
-      this.tweens.add({
-        targets: chomp,
-        scale: { from: 0.5, to: 1 },
-        alpha: { from: 1, to: 0 },
-        duration: 500,
-        onComplete: () => {
-          chomp.destroy();
-        }
-      });
-      
-      // Track corals eaten (only count if it's a coral)
-      if (obstacle.getData('type') === 'coral') {
-        this.coralsEaten++;
-        
-        // Check if fish should grow
-        if (this.coralsEaten >= 5) {
-          this.coralsEaten = 0;
-          this.fishSize += 0.1;
-          this.fish.setScale(this.fishSize);
-          
-          // Visual effect for growth
-          const growthEffect = this.add.circle(this.fish.x, this.fish.y, 50, 0xffffff, 0.5);
-          this.tweens.add({
-            targets: growthEffect,
-            scale: 2,
-            alpha: 0,
-            duration: 800,
-            onComplete: () => {
-              growthEffect.destroy();
-            }
-          });
-        }
-      }
-      
-      // Add small score bonus for eating obstacles
-      this.score += 10;
-      window.dispatchEvent(new CustomEvent('score-update', { detail: this.score }));
-      
-      // Remove the obstacle
-      obstacle.destroy();
-    } else {
-      // Normal collision behavior
-      this.gameOver();
-    }
-  }
-  
-  handleSeagullCollision(object1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
-                         object2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
-    if (!this.gameActive || this.isInvincible) return;
-    
-    // Game over when hitting a seagull
-    this.gameOver();
-  }
-
-  handlePowerUpCollision(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
-                        powerUp: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
-    if (!this.gameActive) return;
-    
-    this.powerUpManager.handlePowerUpCollision(
-      player as Phaser.Physics.Arcade.Sprite, 
-      powerUp as Phaser.Physics.Arcade.Sprite
-    );
-  }
-
-  updateScore() {
-    if (!this.gameActive) return;
-    
-    this.score += 1;
-    window.dispatchEvent(new CustomEvent('score-update', { detail: this.score }));
-    
-    // Check for milestones
-    this.celebrations.checkMilestone(this.score);
+    this.powerUpManager.handlePowerUpCollision(player, powerUp);
   }
   
   gameOver() {
-    this.gameActive = false;
+    this.gameStateManager.setGameActive(false);
     
     // Stop the background music
     this.backgroundMusic.stop();
@@ -363,46 +194,14 @@ export class MainScene extends Phaser.Scene {
     this.time.delayedCall(1000, () => {
       window.dispatchEvent(new CustomEvent('game-over', { 
         detail: { 
-          score: this.score, 
-          time: this.elapsedTime 
+          score: this.gameStateManager.getScore(), 
+          time: this.gameStateManager.getElapsedTime() 
         } 
       }));
       this.scene.start('GameOverScene', { 
-        score: this.score, 
-        time: this.elapsedTime 
+        score: this.gameStateManager.getScore(), 
+        time: this.gameStateManager.getElapsedTime() 
       });
     });
-  }
-
-  handlePointerDown(pointer: Phaser.Input.Pointer) {
-    if (pointer.isDown && this.gameActive) {
-      this.handlePointerMove(pointer);
-    }
-  }
-
-  handlePointerMove(pointer: Phaser.Input.Pointer) {
-    if (pointer.isDown && this.gameActive) {
-      if (pointer.y < this.waterLevel) return;
-      
-      const targetX = pointer.x;
-      const targetY = pointer.y;
-      
-      const dx = targetX - this.fish.x;
-      const dy = targetY - this.fish.y;
-      
-      const angle = Math.atan2(dy, dx);
-      const speed = 200 * this.speedMultiplier;
-      
-      this.fish.setVelocity(
-        Math.cos(angle) * speed,
-        Math.sin(angle) * speed
-      );
-      
-      if (dx < 0) {
-        this.fish.setFlipX(true);
-      } else {
-        this.fish.setFlipX(false);
-      }
-    }
   }
 }
