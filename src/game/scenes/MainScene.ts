@@ -1,3 +1,4 @@
+
 import Phaser from 'phaser';
 import { 
   GAME_SPEED, 
@@ -10,12 +11,14 @@ import { Fishermen } from '../components/Fishermen';
 import { ObstacleManager } from '../components/ObstacleManager';
 import { HookManager } from '../components/HookManager';
 import { Celebrations } from '../components/Celebrations';
+import { PowerUpManager } from '../components/PowerUpManager';
 import assetPaths from '../assets';
 
 export class MainScene extends Phaser.Scene {
   private fish!: Phaser.Physics.Arcade.Sprite;
   private hooks!: Phaser.Physics.Arcade.Group;
   private obstacles!: Phaser.Physics.Arcade.Group;
+  private powerUps!: Phaser.Physics.Arcade.Group;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private score: number = 0;
   private scoreText!: Phaser.GameObjects.Text;
@@ -26,6 +29,8 @@ export class MainScene extends Phaser.Scene {
   private timerText!: Phaser.GameObjects.Text;
   private startTime: number = 0;
   private elapsedTime: number = 0;
+  private isInvincible: boolean = false;
+  private speedMultiplier: number = 1;
   
   // Component managers
   private background!: Background;
@@ -33,6 +38,7 @@ export class MainScene extends Phaser.Scene {
   private obstacleManager!: ObstacleManager;
   private hookManager!: HookManager;
   private celebrations!: Celebrations;
+  private powerUpManager!: PowerUpManager;
 
   constructor() {
     super('MainScene');
@@ -51,6 +57,8 @@ export class MainScene extends Phaser.Scene {
     this.gameSpeed = GAME_SPEED;
     this.lastDifficultyIncrease = 0;
     this.startTime = Date.now();
+    this.isInvincible = false;
+    this.speedMultiplier = 1;
     
     this.waterLevel = this.cameras.main.height / 2;
     
@@ -69,10 +77,12 @@ export class MainScene extends Phaser.Scene {
     // Create game object groups
     this.hooks = this.physics.add.group();
     this.obstacles = this.physics.add.group();
+    this.powerUps = this.physics.add.group();
     
     // Initialize obstacles and hooks managers
     this.obstacleManager = new ObstacleManager(this, this.obstacles, this.waterLevel, this.gameSpeed);
     this.hookManager = new HookManager(this, this.hooks, this.fishermen, this.waterLevel);
+    this.powerUpManager = new PowerUpManager(this, this.powerUps, this.waterLevel, this.gameSpeed);
 
     // Setup collision detection
     this.physics.add.overlap(
@@ -87,6 +97,14 @@ export class MainScene extends Phaser.Scene {
       this.fish, 
       this.obstacles, 
       this.handleCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+      undefined, 
+      this
+    );
+    
+    this.physics.add.overlap(
+      this.fish, 
+      this.powerUps, 
+      this.handlePowerUpCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
       undefined, 
       this
     );
@@ -138,21 +156,28 @@ export class MainScene extends Phaser.Scene {
   update(time: number, delta: number) {
     if (!this.gameActive) return;
 
-    // Handle player fish movement
+    // Update power-ups first to get current effects
+    const powerUpEffects = this.powerUpManager.update(time, delta, this.fish.body.velocity.length());
+    this.speedMultiplier = powerUpEffects.speedMultiplier;
+    this.isInvincible = powerUpEffects.isInvincible;
+
+    // Handle player fish movement with speed boost applied
+    const baseSpeed = 200 * this.speedMultiplier;
+    
     if (this.cursors.left.isDown) {
-      this.fish.setVelocityX(-200);
+      this.fish.setVelocityX(-baseSpeed);
       this.fish.setFlipX(true);
     } else if (this.cursors.right.isDown) {
-      this.fish.setVelocityX(200);
+      this.fish.setVelocityX(baseSpeed);
       this.fish.setFlipX(false);
     } else {
       this.fish.setVelocityX(0);
     }
 
     if (this.cursors.up.isDown) {
-      this.fish.setVelocityY(-200);
+      this.fish.setVelocityY(-baseSpeed);
     } else if (this.cursors.down.isDown) {
-      this.fish.setVelocityY(200);
+      this.fish.setVelocityY(baseSpeed);
     } else {
       this.fish.setVelocityY(0);
     }
@@ -168,13 +193,14 @@ export class MainScene extends Phaser.Scene {
       this.gameSpeed += DIFFICULTY_INCREASE_AMOUNT;
       this.background.setGameSpeed(this.gameSpeed);
       this.obstacleManager.setGameSpeed(this.gameSpeed);
+      this.powerUpManager.setGameSpeed(this.gameSpeed);
       this.lastDifficultyIncrease = time;
     }
   }
 
   handleCollision(object1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
                  object2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
-    if (!this.gameActive) return;
+    if (!this.gameActive || this.isInvincible) return;
     
     this.gameActive = false;
     
@@ -224,6 +250,16 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
+  handlePowerUpCollision(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
+                        powerUp: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
+    if (!this.gameActive) return;
+    
+    this.powerUpManager.handlePowerUpCollision(
+      player as Phaser.Physics.Arcade.Sprite, 
+      powerUp as Phaser.Physics.Arcade.Sprite
+    );
+  }
+
   updateScore() {
     if (!this.gameActive) return;
     
@@ -251,7 +287,7 @@ export class MainScene extends Phaser.Scene {
       const dy = targetY - this.fish.y;
       
       const angle = Math.atan2(dy, dx);
-      const speed = 200;
+      const speed = 200 * this.speedMultiplier;
       
       this.fish.setVelocity(
         Math.cos(angle) * speed,

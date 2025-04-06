@@ -14,7 +14,9 @@ const assetPaths = {
   smallfish1: '/src/assets/smallfish1.svg',
   smallfish2: '/src/assets/smallfish2.svg',
   smallfish3: '/src/assets/smallfish3.svg',
-  wow: '/src/assets/wow.svg'
+  wow: '/src/assets/wow.svg',
+  powerupSpeed: '/src/assets/powerup-speed.svg',
+  powerupInvincibility: '/src/assets/powerup-invincibility.svg'
 };
 
 export default assetPaths;

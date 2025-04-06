@@ -19,3 +19,16 @@ export interface BackgroundFish {
   speed: number;
   depthLevel: number;
 }
+
+export interface PowerUp {
+  sprite: Phaser.Physics.Arcade.Sprite;
+  type: 'speed' | 'invincibility';
+  active: boolean;
+}
+
+export interface ActivePowerUp {
+  type: 'speed' | 'invincibility';
+  duration: number;
+  startTime: number;
+  indicator?: Phaser.GameObjects.Image;
+}
