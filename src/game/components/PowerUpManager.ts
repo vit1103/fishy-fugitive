@@ -21,7 +21,7 @@ export class PowerUpManager {
     this.statusIndicator.setDepth(100);
   }
 
-  update(time: number, delta: number, playerSpeed: number): { speedMultiplier: number, isInvincible: boolean } {
+  update(time: number, delta: number, playerSpeed: number): { speedMultiplier: number, isInvincible: boolean, canEatObstacles: boolean } {
     this.movePowerUps(delta);
     this.spawnPowerUp(time);
     return this.updateActivePowerUps(time);
@@ -45,8 +45,21 @@ export class PowerUpManager {
       
       // Random chance (50%) to spawn a power-up
       if (Math.random() > 0.5) {
-        const type = Math.random() > 0.5 ? 'speed' : 'invincibility';
-        const textureKey = type === 'speed' ? 'powerupSpeed' : 'powerupInvincibility';
+        // Randomly choose power-up type with equal probability
+        const randomValue = Math.random();
+        let type: 'speed' | 'invincibility' | 'eat';
+        let textureKey: string;
+        
+        if (randomValue < 0.33) {
+          type = 'speed';
+          textureKey = 'powerupSpeed';
+        } else if (randomValue < 0.67) {
+          type = 'invincibility';
+          textureKey = 'powerupInvincibility';
+        } else {
+          type = 'eat';
+          textureKey = 'powerupEat';
+        }
         
         const x = this.scene.cameras.main.width + 50;
         const y = Phaser.Math.Between(
@@ -72,9 +85,10 @@ export class PowerUpManager {
     }
   }
 
-  private updateActivePowerUps(time: number): { speedMultiplier: number, isInvincible: boolean } {
+  private updateActivePowerUps(time: number): { speedMultiplier: number, isInvincible: boolean, canEatObstacles: boolean } {
     let speedMultiplier = 1;
     let isInvincible = false;
+    let canEatObstacles = false;
     
     // Update the status indicators
     this.statusIndicator.removeAll(true);
@@ -88,10 +102,23 @@ export class PowerUpManager {
           speedMultiplier = 1.5; // 50% speed boost
         } else if (powerUp.type === 'invincibility') {
           isInvincible = true;
+        } else if (powerUp.type === 'eat') {
+          canEatObstacles = true;
         }
         
         // Add indicator to UI
-        const icon = this.scene.add.image(0, 0, powerUp.type === 'speed' ? 'powerupSpeed' : 'powerupInvincibility');
+        let iconKey = 'powerupSpeed';
+        let iconColor = 0x00ff00;
+        
+        if (powerUp.type === 'invincibility') {
+          iconKey = 'powerupInvincibility';
+          iconColor = 0xffff00;
+        } else if (powerUp.type === 'eat') {
+          iconKey = 'powerupEat';
+          iconColor = 0xff44aa;
+        }
+        
+        const icon = this.scene.add.image(0, 0, iconKey);
         icon.setScale(0.4);
         
         // Calculate remaining time as percentage
@@ -102,7 +129,7 @@ export class PowerUpManager {
         graphics.clear();
         graphics.fillStyle(0x000000, 0.5);
         graphics.fillCircle(0, 0, 22);
-        graphics.fillStyle(powerUp.type === 'speed' ? 0x00ff00 : 0xffff00, 0.7);
+        graphics.fillStyle(iconColor, 0.7);
         graphics.slice(0, 0, 20, 0, Phaser.Math.DegToRad(360 * remaining), true);
         graphics.fillPath();
         
@@ -118,18 +145,22 @@ export class PowerUpManager {
       return false;
     });
     
-    return { speedMultiplier, isInvincible };
+    return { speedMultiplier, isInvincible, canEatObstacles };
   }
 
   handlePowerUpCollision(player: Phaser.Physics.Arcade.Sprite, powerUp: Phaser.Physics.Arcade.Sprite): void {
-    const type = powerUp.getData('type') as 'speed' | 'invincibility';
+    const type = powerUp.getData('type') as 'speed' | 'invincibility' | 'eat';
     const isActive = powerUp.getData('active') as boolean;
     
     if (isActive) {
       powerUp.setData('active', false);
       
       // Create short animation effect
-      const effect = this.scene.add.image(powerUp.x, powerUp.y, type === 'speed' ? 'powerupSpeed' : 'powerupInvincibility');
+      let effectKey = 'powerupSpeed';
+      if (type === 'invincibility') effectKey = 'powerupInvincibility';
+      if (type === 'eat') effectKey = 'powerupEat';
+      
+      const effect = this.scene.add.image(powerUp.x, powerUp.y, effectKey);
       effect.setScale(0.6);
       
       this.scene.tweens.add({
@@ -143,16 +174,20 @@ export class PowerUpManager {
       });
       
       // Add to active power-ups
+      let duration = 5000; // Default 5s
+      if (type === 'invincibility') duration = 8000; // 8s
+      if (type === 'eat') duration = 6000; // 6s
+      
       this.activePowerUps.push({
         type,
-        duration: type === 'speed' ? 5000 : 8000, // Speed: 5s, Invincibility: 8s
+        duration,
         startTime: this.scene.time.now
       });
       
       // Apply visual effect to player
       if (type === 'speed') {
         player.setTint(0x00ffff);
-        this.scene.time.delayedCall(5000, () => {
+        this.scene.time.delayedCall(duration, () => {
           // Only remove tint if no speed power-up is active
           if (!this.activePowerUps.some(p => p.type === 'speed')) {
             player.clearTint();
@@ -170,11 +205,33 @@ export class PowerUpManager {
           repeat: -1
         });
         
-        this.scene.time.delayedCall(8000, () => {
+        this.scene.time.delayedCall(duration, () => {
           pulseAnimation.stop();
           player.setAlpha(1);
           // Only remove tint if no invincibility power-up is active
           if (!this.activePowerUps.some(p => p.type === 'invincibility')) {
+            player.clearTint();
+          }
+        });
+      } else if (type === 'eat') {
+        player.setTint(0xff44aa);
+        
+        // Add chomping mouth animation
+        const scaleAnimation = this.scene.tweens.add({
+          targets: player,
+          scaleX: { from: 0.7, to: 0.8 },
+          scaleY: { from: 0.7, to: 0.8 },
+          duration: 400,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+        
+        this.scene.time.delayedCall(duration, () => {
+          scaleAnimation.stop();
+          player.setScale(0.7);
+          // Only remove tint if no eat power-up is active
+          if (!this.activePowerUps.some(p => p.type === 'eat')) {
             player.clearTint();
           }
         });

@@ -22,13 +22,20 @@ export interface BackgroundFish {
 
 export interface PowerUp {
   sprite: Phaser.Physics.Arcade.Sprite;
-  type: 'speed' | 'invincibility';
+  type: 'speed' | 'invincibility' | 'eat';
   active: boolean;
 }
 
 export interface ActivePowerUp {
-  type: 'speed' | 'invincibility';
+  type: 'speed' | 'invincibility' | 'eat';
   duration: number;
   startTime: number;
   indicator?: Phaser.GameObjects.Image;
+}
+
+export interface Seagull {
+  sprite: Phaser.Physics.Arcade.Sprite;
+  state: 'flying' | 'diving' | 'returning';
+  target?: { x: number, y: number };
+  initialY: number;
 }

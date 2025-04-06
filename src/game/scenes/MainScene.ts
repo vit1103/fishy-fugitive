@@ -12,6 +12,7 @@ import { ObstacleManager } from '../components/ObstacleManager';
 import { HookManager } from '../components/HookManager';
 import { Celebrations } from '../components/Celebrations';
 import { PowerUpManager } from '../components/PowerUpManager';
+import { SeagullManager } from '../components/SeagullManager';
 import assetPaths from '../assets';
 
 export class MainScene extends Phaser.Scene {
@@ -19,6 +20,7 @@ export class MainScene extends Phaser.Scene {
   private hooks!: Phaser.Physics.Arcade.Group;
   private obstacles!: Phaser.Physics.Arcade.Group;
   private powerUps!: Phaser.Physics.Arcade.Group;
+  private seagulls!: Phaser.Physics.Arcade.Group;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private score: number = 0;
   private scoreText!: Phaser.GameObjects.Text;
@@ -31,6 +33,7 @@ export class MainScene extends Phaser.Scene {
   private elapsedTime: number = 0;
   private isInvincible: boolean = false;
   private speedMultiplier: number = 1;
+  private canEatObstacles: boolean = false;
   
   // Component managers
   private background!: Background;
@@ -39,6 +42,7 @@ export class MainScene extends Phaser.Scene {
   private hookManager!: HookManager;
   private celebrations!: Celebrations;
   private powerUpManager!: PowerUpManager;
+  private seagullManager!: SeagullManager;
 
   constructor() {
     super('MainScene');
@@ -59,6 +63,7 @@ export class MainScene extends Phaser.Scene {
     this.startTime = Date.now();
     this.isInvincible = false;
     this.speedMultiplier = 1;
+    this.canEatObstacles = false;
     
     this.waterLevel = this.cameras.main.height / 2;
     
@@ -78,17 +83,19 @@ export class MainScene extends Phaser.Scene {
     this.hooks = this.physics.add.group();
     this.obstacles = this.physics.add.group();
     this.powerUps = this.physics.add.group();
+    this.seagulls = this.physics.add.group();
     
-    // Initialize obstacles and hooks managers
+    // Initialize managers
     this.obstacleManager = new ObstacleManager(this, this.obstacles, this.waterLevel, this.gameSpeed);
     this.hookManager = new HookManager(this, this.hooks, this.fishermen, this.waterLevel);
     this.powerUpManager = new PowerUpManager(this, this.powerUps, this.waterLevel, this.gameSpeed);
+    this.seagullManager = new SeagullManager(this, this.fish, this.waterLevel);
 
     // Setup collision detection
     this.physics.add.overlap(
       this.fish, 
       this.hooks, 
-      this.handleCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, 
+      this.handleHookCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, 
       undefined, 
       this
     );
@@ -96,7 +103,7 @@ export class MainScene extends Phaser.Scene {
     this.physics.add.overlap(
       this.fish, 
       this.obstacles, 
-      this.handleCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+      this.handleObstacleCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
       undefined, 
       this
     );
@@ -105,6 +112,14 @@ export class MainScene extends Phaser.Scene {
       this.fish, 
       this.powerUps, 
       this.handlePowerUpCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+      undefined, 
+      this
+    );
+    
+    this.physics.add.overlap(
+      this.fish, 
+      this.seagulls, 
+      this.handleSeagullCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
       undefined, 
       this
     );
@@ -160,6 +175,7 @@ export class MainScene extends Phaser.Scene {
     const powerUpEffects = this.powerUpManager.update(time, delta, this.fish.body.velocity.length());
     this.speedMultiplier = powerUpEffects.speedMultiplier;
     this.isInvincible = powerUpEffects.isInvincible;
+    this.canEatObstacles = powerUpEffects.canEatObstacles;
 
     // Handle player fish movement with speed boost applied
     const baseSpeed = 200 * this.speedMultiplier;
@@ -187,6 +203,7 @@ export class MainScene extends Phaser.Scene {
     this.fishermen.update(delta, this.fish.x);
     this.obstacleManager.update(time, delta);
     this.hookManager.update(time, delta);
+    this.seagullManager.update(time, delta);
 
     // Increase difficulty over time
     if (time > this.lastDifficultyIncrease + DIFFICULTY_INCREASE_INTERVAL) {
@@ -198,10 +215,79 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  handleCollision(object1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
-                 object2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
+  handleHookCollision(object1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
+                     object2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
     if (!this.gameActive || this.isInvincible) return;
     
+    this.gameOver();
+  }
+  
+  handleObstacleCollision(object1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
+                         object2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
+    if (!this.gameActive || this.isInvincible) return;
+    
+    const obstacle = object2 as Phaser.Physics.Arcade.Sprite;
+    
+    if (this.canEatObstacles) {
+      // Eat the obstacle!
+      const chomp = this.add.image(obstacle.x, obstacle.y, 'bubble');
+      chomp.setScale(0.5);
+      
+      this.tweens.add({
+        targets: chomp,
+        scale: { from: 0.5, to: 1 },
+        alpha: { from: 1, to: 0 },
+        duration: 500,
+        onComplete: () => {
+          chomp.destroy();
+        }
+      });
+      
+      // Add small score bonus for eating obstacles
+      this.score += 10;
+      window.dispatchEvent(new CustomEvent('score-update', { detail: this.score }));
+      
+      // Remove the obstacle
+      obstacle.destroy();
+    } else {
+      // Normal collision behavior
+      this.gameOver();
+    }
+  }
+  
+  handleSeagullCollision(object1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
+                         object2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
+    if (!this.gameActive || this.isInvincible) return;
+    
+    const seagull = object2 as Phaser.Physics.Arcade.Sprite;
+    
+    // Only collide if seagull is diving into the water
+    if (seagull.y > this.waterLevel) {
+      this.gameOver();
+    }
+  }
+
+  handlePowerUpCollision(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
+                        powerUp: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
+    if (!this.gameActive) return;
+    
+    this.powerUpManager.handlePowerUpCollision(
+      player as Phaser.Physics.Arcade.Sprite, 
+      powerUp as Phaser.Physics.Arcade.Sprite
+    );
+  }
+
+  updateScore() {
+    if (!this.gameActive) return;
+    
+    this.score += 1;
+    window.dispatchEvent(new CustomEvent('score-update', { detail: this.score }));
+    
+    // Check for milestones
+    this.celebrations.checkMilestone(this.score);
+  }
+  
+  gameOver() {
     this.gameActive = false;
     
     const bubbles = this.add.group({
@@ -248,26 +334,6 @@ export class MainScene extends Phaser.Scene {
         time: this.elapsedTime 
       });
     });
-  }
-
-  handlePowerUpCollision(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
-                        powerUp: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
-    if (!this.gameActive) return;
-    
-    this.powerUpManager.handlePowerUpCollision(
-      player as Phaser.Physics.Arcade.Sprite, 
-      powerUp as Phaser.Physics.Arcade.Sprite
-    );
-  }
-
-  updateScore() {
-    if (!this.gameActive) return;
-    
-    this.score += 1;
-    window.dispatchEvent(new CustomEvent('score-update', { detail: this.score }));
-    
-    // Check for milestones
-    this.celebrations.checkMilestone(this.score);
   }
 
   handlePointerDown(pointer: Phaser.Input.Pointer) {
