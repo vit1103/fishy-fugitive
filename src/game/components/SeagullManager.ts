@@ -5,7 +5,7 @@ import { Seagull } from '../types';
 // Extend the Phaser.Scene type definition to include our custom properties
 declare module 'phaser' {
   interface Scene {
-    seagulls?: Phaser.Physics.Arcade.Group;
+    seagulls: Phaser.Physics.Arcade.Group;
   }
 }
 

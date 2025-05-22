@@ -1,4 +1,3 @@
-
 import Phaser from 'phaser';
 import { 
   GAME_SPEED, 
@@ -22,7 +21,7 @@ export class MainScene extends Phaser.Scene {
   private hooks!: Phaser.Physics.Arcade.Group;
   private obstacles!: Phaser.Physics.Arcade.Group;
   private powerUps!: Phaser.Physics.Arcade.Group;
-  private seagulls!: Phaser.Physics.Arcade.Group;
+  public seagulls!: Phaser.Physics.Arcade.Group;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private gameSpeed: number = GAME_SPEED;
   private lastDifficultyIncrease: number = 0;
