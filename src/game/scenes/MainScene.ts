@@ -52,7 +52,7 @@ export class MainScene extends Phaser.Scene {
     });
     
     // Load background music
-    this.load.audio('background-music', '/src/assets/background-music.mp3');
+    //this.load.audio('background-music', '/src/assets/background-music.mp3');
   }
 
   create() {
@@ -60,11 +60,11 @@ export class MainScene extends Phaser.Scene {
     this.lastDifficultyIncrease = 0;
     
     // Play background music
-    this.backgroundMusic = this.sound.add('background-music', {
-      volume: 0.5,
-      loop: true
-    });
-    this.backgroundMusic.play();
+    // this.backgroundMusic = this.sound.add('background-music', {
+    //   volume: 0.5,
+    //   loop: true
+    // });
+    // this.backgroundMusic.play();
     
     this.waterLevel = this.cameras.main.height / 2;
     
