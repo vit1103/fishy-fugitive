@@ -1,0 +1,19 @@
+
+<svg width="80" height="60" viewBox="0 0 80 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Body -->
+  <path d="M10 30C10 30 20 20 40 25C60 30 70 25 75 20C70 25 60 35 40 30C20 25 15 35 10 30Z" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+  
+  <!-- Wings -->
+  <path d="M40 25L50 15L55 20L40 25Z" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+  <path d="M40 25L55 30L50 35L40 25Z" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+  
+  <!-- Eye -->
+  <circle cx="40" cy="25" r="3" fill="#FFDD00"/>
+  <circle cx="40" cy="25" r="1" fill="black"/>
+  
+  <!-- Beak -->
+  <path d="M40 25L35 27L33 25L35 23L40 25Z" fill="#FF9900" stroke="#FF8800" stroke-width="0.5"/>
+  
+  <!-- Feet (visible when diving) -->
+  <path d="M30 35L28 38M32 35L34 38" stroke="#FF9900" stroke-width="1" stroke-linecap="round"/>
+</svg>
