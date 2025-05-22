@@ -225,7 +225,7 @@ const FishyEscape: React.FC = () => {
 
                 <Button
                   onClick={toggleLeaderboard}
-                  variant="outline"
+                  // variant="outline"
                   className="bg-ocean-deep hover:bg-ocean text-white border-none px-8 py-6 text-lg rounded-full transition-all duration-300 hover:scale-105"
                 >
                   <Trophy size={18} />
@@ -312,8 +312,7 @@ const FishyEscape: React.FC = () => {
 
                 <Button
                   onClick={toggleLeaderboard}
-                  variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10 rounded-full transition-all duration-300 flex items-center gap-2"
+                  className="bg-ocean-deep hover:bg-ocean text-white border-none px-6 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2"
                 >
                   <Trophy size={18} />
                   Leaderboard
@@ -321,8 +320,7 @@ const FishyEscape: React.FC = () => {
 
                 <Button
                   onClick={handleHome}
-                  variant="ghost"
-                  className="text-white hover:bg-white/10 rounded-full transition-all duration-300"
+                  className="bg-ocean-deep hover:bg-ocean text-white border-none px-6 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2"
                 >
                   Home
                 </Button>
