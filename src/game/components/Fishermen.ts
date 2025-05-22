@@ -17,7 +17,7 @@ export class Fishermen {
   createBoatAndFisherman() {
     this.fishermen = [];
     
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       const x = 200 + i * 300;
       const boat = this.scene.add.image(x, this.waterLevel - 20, 'boat');
       const fisherman = this.scene.add.image(x - 20, this.waterLevel - 60, 'fisherman');

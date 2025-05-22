@@ -80,14 +80,20 @@ export class ObstacleManager {
       obstacleType === "plant4" ||
       obstacleType === "plant5"
     ) {
-      scale = Phaser.Math.FloatBetween(0.7, 1);
-      obstacle.setSize(40, maxObstacleHeight * scale);
-      obstacle.setOffset(30, 5);
+      scale = Phaser.Math.FloatBetween(0.2, 0.5);
+      
+      // For SVG plants, use a simpler collision body
+      const collisionWidth = 20;  // Narrow collision body
+      const collisionHeight = 60; // Taller collision body
+      
+      obstacle.setSize(collisionWidth, collisionHeight);
+      obstacle.setOffset((100 - collisionWidth) / 2, 200 - collisionHeight); // Based on SVG viewBox
     }
 
     obstacle.setScale(scale);
     obstacle.setOrigin(0.5, 1);
     obstacle.setData("type", obstacleType);
+    obstacle.setDebug(true, true, 0xff0000);
   }
 
   setGameSpeed(speed: number) {

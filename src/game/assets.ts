@@ -1,4 +1,3 @@
-
 // This file maps asset names to their file paths
 const assetPaths = {
   fish: 'assets/fish.svg',
@@ -10,11 +9,11 @@ const assetPaths = {
   cloud: 'assets/cloud.svg',
   coral: 'assets/coral.png',
   stone: 'assets/stone.svg',
-  plant1: 'assets/plant1.png',
-  plant2: 'assets/plant2.png',
-  plant3: 'assets/plant3.png',
-  plant4: 'assets/plant4.png',
-  plant5: 'assets/plant5.png',
+  plant1: 'assets/plant1.svg',
+  plant2: 'assets/plant2.svg',
+  plant3: 'assets/plant3.svg',
+  plant4: 'assets/plant4.svg',
+  plant5: 'assets/plant5.svg',
   smallfish1: 'assets/smallfish1.svg',
   smallfish2: 'assets/smallfish2.svg',
   smallfish3: 'assets/smallfish3.svg',

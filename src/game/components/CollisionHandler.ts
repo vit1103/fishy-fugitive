@@ -1,4 +1,3 @@
-
 import Phaser from 'phaser';
 
 export class CollisionHandler {
@@ -41,6 +40,7 @@ export class CollisionHandler {
   }
 
   private setupCollisions() {
+    // Use overlap for hooks and powerups since we want to collect them
     this.scene.physics.add.overlap(
       this.fish, 
       this.hooks, 
@@ -49,11 +49,12 @@ export class CollisionHandler {
       this
     );
     
+    // Use overlap for obstacles but with a custom process callback
     this.scene.physics.add.overlap(
       this.fish, 
       this.obstacles, 
       this.handleObstacleCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
-      undefined, 
+      this.processObstacleCollision,
       this
     );
     
@@ -72,6 +73,22 @@ export class CollisionHandler {
       undefined, 
       this
     );
+
+    // Enable debug visualization for the fish
+    this.fish.setDebug(true, true, 0x00ff00);
+  }
+
+  private processObstacleCollision(fish: Phaser.Physics.Arcade.Sprite, obstacle: Phaser.Physics.Arcade.Sprite): boolean {
+    // Get the bounds of both objects
+    const fishBounds = fish.getBounds();
+    const obstacleBounds = obstacle.getBounds();
+    
+    // Calculate the overlap
+    const overlapX = Math.min(fishBounds.right, obstacleBounds.right) - Math.max(fishBounds.left, obstacleBounds.left);
+    const overlapY = Math.min(fishBounds.bottom, obstacleBounds.bottom) - Math.max(fishBounds.top, obstacleBounds.top);
+    
+    // Only trigger collision if there's significant overlap
+    return overlapX > 10 && overlapY > 10;
   }
 
   handleHookCollision(object1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 

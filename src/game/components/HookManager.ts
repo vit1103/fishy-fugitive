@@ -1,4 +1,3 @@
-
 import Phaser from 'phaser';
 import { Fishermen } from './Fishermen';
 import { 
@@ -14,6 +13,7 @@ export class HookManager {
   private fishermen: Fishermen;
   private waterLevel: number;
   private nextHookTime: number = 0;
+  private activeFishermen: Set<number> = new Set();
 
   constructor(scene: Phaser.Scene, hooks: Phaser.Physics.Arcade.Group, fishermen: Fishermen, waterLevel: number) {
     this.scene = scene;
@@ -30,27 +30,40 @@ export class HookManager {
 
     this.hooks.getChildren().forEach((hook: Phaser.GameObjects.GameObject) => {
       const h = hook as Phaser.Physics.Arcade.Sprite;
+      const fishermanIndex = h.getData('fishermanIndex');
       
-      if (h.getData('pulling') === true) {
-        h.y -= h.getData('pullSpeed') * (delta / 1000);
+      if (fishermanIndex !== undefined) {
+        const fishermanWithBoat = this.fishermen.fishermen[fishermanIndex];
+        h.x = fishermanWithBoat.boat.x;
         
-        if (h.y <= this.waterLevel) {
-          h.destroy();
+        if (h.getData('pulling') === true) {
+          h.y -= h.getData('pullSpeed') * (delta / 1000);
+          
+          if (h.y <= this.waterLevel) {
+            // Clear the rope before destroying the hook
+            if (fishermanWithBoat.ropeGraphics) {
+              fishermanWithBoat.ropeGraphics.clear();
+            }
+            this.activeFishermen.delete(fishermanIndex);
+            h.destroy();
+            return;
+          }
         }
-      } else {
-        const fishermanIndex = h.getData('fishermanIndex');
-        if (fishermanIndex !== undefined) {
-          const fishermanWithBoat = this.fishermen.fishermen[fishermanIndex];
-          h.x = fishermanWithBoat.boat.x;
-        }
+        
+        this.fishermen.drawRope(h);
       }
-      
-      this.fishermen.drawRope(h);
     });
   }
 
   spawnHook() {
-    const randomIndex = Phaser.Math.Between(0, this.fishermen.fishermen.length - 1);
+       // Get available fishermen (those without active hooks)
+       const availableFishermen = this.fishermen.fishermen
+       .map((_, index) => index)
+       .filter(index => !this.activeFishermen.has(index));
+ 
+     if (availableFishermen.length === 0) return;
+ 
+     const randomIndex = Phaser.Utils.Array.GetRandom(availableFishermen);
     const fishermanWithBoat = this.fishermen.fishermen[randomIndex];
     
     const x = fishermanWithBoat.boat.x;
@@ -63,6 +76,9 @@ export class HookManager {
     
     hook.setData('fishermanIndex', randomIndex);
     hook.setData('pulling', false);
+
+    // Mark this fisherman as having an active hook
+    this.activeFishermen.add(randomIndex);
     
     this.scene.tweens.add({
       targets: hook,
