@@ -289,14 +289,14 @@ const FishyEscape: React.FC = () => {
                   <p className="text-white/70 flex items-center gap-1 mb-1">
                     <Trophy size={16} /> Score
                   </p>
-                  <p className="text-2xl font-bold text-white">{score}</p>
+                  <p className="text-3xl font-bold text-white">{score}</p>
                 </div>
 
                 <div className="flex flex-col items-center">
                   <p className="text-white/70 flex items-center gap-1 mb-1">
                     <Timer size={16} /> Time
                   </p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-3xl font-bold text-white">
                     {formatTime(time)}
                   </p>
                 </div>
@@ -305,7 +305,7 @@ const FishyEscape: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-4 justify-center mb-5">
                 <Button
                   onClick={handleRestartGame}
-                  className="bg-ocean-deep hover:bg-ocean text-white border-none px-6 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2"
+                  className="bg-ocean-deep hover:bg-ocean text-white border-none px-6 py-3 rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2"
                 >
                   <RefreshCw size={18} />
                   Play Again
@@ -313,7 +313,7 @@ const FishyEscape: React.FC = () => {
 
                 <Button
                   onClick={toggleLeaderboard}
-                  className="bg-ocean-deep hover:bg-ocean text-white border-none px-6 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2"
+                  className="bg-ocean-deep hover:bg-ocean text-white border-none px-6 py-3 rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2"
                 >
                   <Trophy size={18} />
                   Leaderboard
@@ -321,7 +321,7 @@ const FishyEscape: React.FC = () => {
 
                 <Button
                   onClick={handleHome}
-                  className="bg-ocean-deep hover:bg-ocean text-white border-none px-6 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2"
+                  className="bg-ocean-deep hover:bg-ocean text-white border-none px-6 py-3 rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2"
                 >
                   Home
                 </Button>

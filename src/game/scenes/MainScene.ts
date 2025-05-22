@@ -72,7 +72,7 @@ export class MainScene extends Phaser.Scene {
     this.celebrations = new Celebrations(this);
 
     // Create the player fish
-    this.fish = this.physics.add.sprite(100, this.waterLevel + 100, 'fish');
+    this.fish = this.physics.add.sprite(this.cameras.main.width * 0.15, this.waterLevel + 100, 'fish');
     this.fish.setCollideWorldBounds(true);
     this.fish.setScale(0.7);
     this.fish.setSize(60, 30);
