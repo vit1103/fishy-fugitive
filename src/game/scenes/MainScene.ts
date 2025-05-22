@@ -155,7 +155,7 @@ export class MainScene extends Phaser.Scene {
     this.gameStateManager.setGameActive(false);
     
     // Stop the background music
-    this.backgroundMusic.stop();
+    //this.backgroundMusic.stop();
     
     const bubbles = this.add.group({
       key: 'bubble',
