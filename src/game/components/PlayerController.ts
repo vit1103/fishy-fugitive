@@ -1,18 +1,15 @@
-
 import Phaser from 'phaser';
 
 export class PlayerController {
   private scene: Phaser.Scene;
   private fish: Phaser.Physics.Arcade.Sprite;
-  private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
   private speedMultiplier: number = 1;
   private fishSize: number = 0.7;
   private waterLevel: number;
 
-  constructor(scene: Phaser.Scene, fish: Phaser.Physics.Arcade.Sprite, cursors: Phaser.Types.Input.Keyboard.CursorKeys, waterLevel: number) {
+  constructor(scene: Phaser.Scene, fish: Phaser.Physics.Arcade.Sprite, waterLevel: number) {
     this.scene = scene;
     this.fish = fish;
-    this.cursors = cursors;
     this.waterLevel = waterLevel;
     
     // Setup input handlers
@@ -22,24 +19,6 @@ export class PlayerController {
 
   update() {
     const baseSpeed = 200 * this.speedMultiplier;
-    
-    if (this.cursors.left.isDown) {
-      this.fish.setVelocityX(-baseSpeed);
-      this.fish.setFlipX(true);
-    } else if (this.cursors.right.isDown) {
-      this.fish.setVelocityX(baseSpeed);
-      this.fish.setFlipX(false);
-    } else {
-      this.fish.setVelocityX(0);
-    }
-
-    if (this.cursors.up.isDown) {
-      this.fish.setVelocityY(-baseSpeed);
-    } else if (this.cursors.down.isDown) {
-      this.fish.setVelocityY(baseSpeed);
-    } else {
-      this.fish.setVelocityY(0);
-    }
   }
 
   setSpeedMultiplier(multiplier: number) {

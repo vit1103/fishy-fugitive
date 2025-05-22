@@ -1,4 +1,3 @@
-
 import Phaser from 'phaser';
 import { 
   GAME_SPEED, 
@@ -23,7 +22,6 @@ export class MainScene extends Phaser.Scene {
   private obstacles!: Phaser.Physics.Arcade.Group;
   private powerUps!: Phaser.Physics.Arcade.Group;
   private seagulls!: Phaser.Physics.Arcade.Group;
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private gameSpeed: number = GAME_SPEED;
   private lastDifficultyIncrease: number = 0;
   private waterLevel: number = 0;
@@ -93,7 +91,7 @@ export class MainScene extends Phaser.Scene {
     this.seagullManager = new SeagullManager(this, this.fish, this.waterLevel);
     
     // Setup input
-    this.cursors = this.input.keyboard.createCursorKeys();
+    // this.cursors = this.input.keyboard.createCursorKeys();
     
     // Setup physics boundaries
     this.physics.world.setBounds(0, this.waterLevel, this.cameras.main.width, this.cameras.main.height - this.waterLevel);
@@ -102,7 +100,7 @@ export class MainScene extends Phaser.Scene {
     this.gameStateManager = new GameStateManager(this, this.celebrations);
     
     // Initialize player controller
-    this.playerController = new PlayerController(this, this.fish, this.cursors, this.waterLevel);
+    this.playerController = new PlayerController(this, this.fish, this.waterLevel);
     
     // Initialize collision handler
     this.collisionHandler = new CollisionHandler(
