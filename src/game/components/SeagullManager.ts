@@ -2,6 +2,13 @@
 import Phaser from 'phaser';
 import { Seagull } from '../types';
 
+// Extend the Phaser.Scene type definition to include our custom properties
+declare module 'phaser' {
+  interface Scene {
+    seagulls?: Phaser.Physics.Arcade.Group;
+  }
+}
+
 export class SeagullManager {
   private scene: Phaser.Scene;
   private waterLevel: number;
