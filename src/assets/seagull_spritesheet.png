@@ -1,0 +1,7 @@
+
+This will be a binary file containing the seagull animation frames.
+You'll need to create this as a PNG spritesheet with 4 frames:
+1. Frame 0: Seagull flying with wings up
+2. Frame 1: Seagull flying with wings down
+3. Frame 2: Seagull diving with wings partially folded
+4. Frame 3: Seagull diving with wings fully folded

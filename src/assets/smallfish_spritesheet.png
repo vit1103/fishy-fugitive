@@ -1,0 +1,6 @@
+
+This will be a binary file containing the small fish animation frames.
+You'll need to create this as a PNG spritesheet with 3 frames:
+1. Frame 0: Small fish in normal position
+2. Frame 1: Small fish with tail slightly bent
+3. Frame 2: Small fish with tail bent in opposite direction

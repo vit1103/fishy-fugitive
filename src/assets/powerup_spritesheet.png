@@ -1,0 +1,6 @@
+
+This will be a binary file containing the power-up animation frames.
+You'll need to create this as a PNG spritesheet with 6 frames:
+1. Frame 0-1: Speed power-up (alternating glow effect)
+2. Frame 2-3: Invincibility power-up (alternating glow effect)
+3. Frame 4-5: Eat obstacles power-up (alternating glow effect)
