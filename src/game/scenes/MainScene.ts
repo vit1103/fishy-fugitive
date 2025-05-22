@@ -15,7 +15,7 @@ import { SeagullManager } from '../components/SeagullManager';
 import { PlayerController } from '../components/PlayerController';
 import { CollisionHandler } from '../components/CollisionHandler';
 import { GameStateManager } from '../components/GameStateManager';
-import assetPaths, { spriteAnimations } from '../assets';
+import assetPaths from '../assets';
 
 export class MainScene extends Phaser.Scene {
   private fish!: Phaser.Physics.Arcade.Sprite;
@@ -52,53 +52,7 @@ export class MainScene extends Phaser.Scene {
     });
     
     // Load background music
-    //this.load.audio('background-music', assetPaths.backgroundMusic);
-    
-    // Create simple animations using the loaded images
-    // This is a workaround since we don't have actual sprite sheets
-    this.load.once('complete', () => {
-      this.createAnimations();
-    });
-  }
-
-  createAnimations() {
-    // Fish swimming animation (simulate with scale)
-    this.anims.create({
-      key: spriteAnimations.fish.key,
-      frames: this.anims.generateFrameNumbers('fish', { start: 0, end: 0 }),
-      frameRate: spriteAnimations.fish.frameRate,
-      repeat: spriteAnimations.fish.repeat,
-      yoyo: true
-    });
-    
-    // Small fish animations
-    ['smallfish1', 'smallfish2', 'smallfish3'].forEach(fishType => {
-      this.anims.create({
-        key: spriteAnimations[fishType].key,
-        frames: this.anims.generateFrameNumbers(fishType, { start: 0, end: 0 }),
-        frameRate: spriteAnimations[fishType].frameRate,
-        repeat: spriteAnimations[fishType].repeat,
-        yoyo: true
-      });
-    });
-    
-    // Seagull flying animation
-    this.anims.create({
-      key: spriteAnimations.seagull.key,
-      frames: this.anims.generateFrameNumbers('seagull', { start: 0, end: 0 }),
-      frameRate: spriteAnimations.seagull.frameRate,
-      repeat: spriteAnimations.seagull.repeat,
-      yoyo: true
-    });
-    
-    // Bubble floating animation
-    this.anims.create({
-      key: spriteAnimations.bubble.key,
-      frames: this.anims.generateFrameNumbers('bubble', { start: 0, end: 0 }),
-      frameRate: spriteAnimations.bubble.frameRate,
-      repeat: spriteAnimations.bubble.repeat,
-      yoyo: true
-    });
+    this.load.audio('background-music', '/src/assets/background-music.mp3');
   }
 
   create() {
@@ -106,11 +60,11 @@ export class MainScene extends Phaser.Scene {
     this.lastDifficultyIncrease = 0;
     
     // Play background music
-    // this.backgroundMusic = this.sound.add('background-music', {
-    //   volume: 0.5,
-    //   loop: true
-    // });
-    // this.backgroundMusic.play();
+    this.backgroundMusic = this.sound.add('background-music', {
+      volume: 0.5,
+      loop: true
+    });
+    this.backgroundMusic.play();
     
     this.waterLevel = this.cameras.main.height / 2;
     
@@ -125,8 +79,6 @@ export class MainScene extends Phaser.Scene {
     this.fish.setScale(0.7);
     this.fish.setSize(60, 30);
     this.fish.setOffset(30, 15);
-    // Play fish swimming animation
-    this.fish.play(spriteAnimations.fish.key);
 
     // Create game object groups
     this.hooks = this.physics.add.group();
@@ -205,9 +157,7 @@ export class MainScene extends Phaser.Scene {
     this.gameStateManager.setGameActive(false);
     
     // Stop the background music
-    if (this.backgroundMusic) {
-      this.backgroundMusic.stop();
-    }
+    this.backgroundMusic.stop();
     
     const bubbles = this.add.group({
       key: 'bubble',
@@ -241,7 +191,6 @@ export class MainScene extends Phaser.Scene {
       h.setData('pulling', false);
     });
     
-    // Ensure the game-over event is dispatched
     this.time.delayedCall(1000, () => {
       window.dispatchEvent(new CustomEvent('game-over', { 
         detail: { 
