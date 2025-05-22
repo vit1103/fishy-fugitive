@@ -1,3 +1,4 @@
+
 import Phaser from 'phaser';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
@@ -28,8 +29,6 @@ export const FISHERMAN_MOVEMENT_SPEED = 1.5;
 export const HOOK_PULL_SPEED_MIN = 80;
 export const HOOK_PULL_SPEED_MAX = 150;
 export const LEADERBOARD_SIZE = 5;
-export const POWERUP_DURATION = 5000;
-export const POWERUP_SPAWN_CHANCE = 40;
 
 // Helper to get/save leaderboard from localStorage
 export const getLeaderboard = (): { time: number; date: string }[] => {

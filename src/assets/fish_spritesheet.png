@@ -1,7 +1,0 @@
-
-This will be a binary file containing the fish animation frames.
-You'll need to create this as a PNG spritesheet with 4 frames:
-1. Frame 0: Fish in normal position
-2. Frame 1: Fish with slight tail bend to the left
-3. Frame 2: Fish in normal position again
-4. Frame 3: Fish with slight tail bend to the right

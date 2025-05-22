@@ -90,18 +90,14 @@ export class Background {
     
     // Create 20 background fish with various types, positions, and speeds
     for (let i = 0; i < 20; i++) {
+      const fishType = Phaser.Math.Between(1, 3);
       const depthLevel = Phaser.Math.FloatBetween(0.2, 0.8); // Used for y-position and scaling
       const y = this.waterLevel + (height - this.waterLevel) * depthLevel;
       const x = Phaser.Math.Between(0, width);
       const direction = Phaser.Math.Between(0, 1) ? 1 : -1;
       const speed = Phaser.Math.FloatBetween(0.5, 1.5) * this.gameSpeed * 0.3;
       
-      // Create sprite instead of image to support animation
-      const fishSprite = this.scene.add.sprite(x, y, 'smallFishSpritesheet');
-      
-      // Play the swimming animation
-      fishSprite.play('small_fish_swim');
-      
+      const fishSprite = this.scene.add.image(x, y, `smallfish${fishType}`);
       fishSprite.setScale(0.5 + (1 - depthLevel) * 0.5); // Smaller scale for deeper fish
       fishSprite.setAlpha(0.3 + depthLevel * 0.7); // More transparent for deeper fish
       fishSprite.setFlipX(direction < 0);

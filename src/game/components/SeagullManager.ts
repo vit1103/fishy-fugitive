@@ -2,145 +2,145 @@
 import Phaser from 'phaser';
 import { Seagull } from '../types';
 
-// Extend the Phaser.Scene type definition to include our custom properties
-declare module 'phaser' {
-  interface Scene {
-    seagulls: Phaser.Physics.Arcade.Group;
-  }
-}
-
 export class SeagullManager {
   private scene: Phaser.Scene;
+  private seagulls: Phaser.Physics.Arcade.Group;
   private waterLevel: number;
-  private seagulls: Seagull[] = [];
   private player: Phaser.Physics.Arcade.Sprite;
   private lastSeagullTime: number = 0;
-  private seagullsGroup: Phaser.Physics.Arcade.Group;
+  private seagullInterval: number = 15000; // 15 seconds between seagull appearances
+  private activeSeagulls: Seagull[] = [];
 
   constructor(scene: Phaser.Scene, player: Phaser.Physics.Arcade.Sprite, waterLevel: number) {
     this.scene = scene;
     this.player = player;
     this.waterLevel = waterLevel;
-    
-    // Create seagulls group
-    this.seagullsGroup = this.scene.physics.add.group();
-    this.scene.seagulls = this.seagullsGroup;
-    
-    // Add initial seagulls
-    this.addSeagull();
-    
-    // Add seagull every 10-15 seconds
-    this.scene.time.addEvent({
-      delay: Phaser.Math.Between(10000, 15000),
-      callback: this.addSeagull,
-      callbackScope: this,
-      loop: true
-    });
-  }
-
-  addSeagull() {
-    const width = this.scene.cameras.main.width;
-    const x = Phaser.Math.Between(0, width);
-    const y = Phaser.Math.Between(50, this.waterLevel - 50);
-    
-    const seagull = this.scene.physics.add.sprite(x, y, 'seagullSpritesheet');
-    seagull.play('seagull_fly');
-    seagull.setScale(0.8);
-    
-    // Add to seagulls group for collision detection
-    this.seagullsGroup.add(seagull);
-    
-    this.seagulls.push({
-      sprite: seagull,
-      state: 'flying',
-      initialY: y
-    });
+    this.seagulls = this.scene.physics.add.group();
   }
 
   update(time: number, delta: number) {
-    const width = this.scene.cameras.main.width;
+    // Spawn new seagulls occasionally
+    this.spawnSeagull(time);
     
-    this.seagulls.forEach((seagull, index) => {
+    // Update existing seagulls
+    this.updateSeagulls(delta);
+  }
+
+  private spawnSeagull(time: number) {
+    if (time > this.lastSeagullTime + this.seagullInterval) {
+      this.lastSeagullTime = time;
+      
+      // Random chance (40%) to spawn a seagull
+      if (Math.random() > 0.6) {
+        const startX = Phaser.Math.Between(
+          this.scene.cameras.main.width * 0.2,
+          this.scene.cameras.main.width * 0.8
+        );
+        
+        const startY = Phaser.Math.Between(50, this.waterLevel - 30);
+        
+        const seagull = this.seagulls.create(startX, startY, 'seagull') as Phaser.Physics.Arcade.Sprite;
+        seagull.setScale(0.8);
+        seagull.setSize(40, 20);
+        seagull.setOffset(20, 20);
+        
+        // Store as an active seagull with state information
+        const newSeagull: Seagull = {
+          sprite: seagull,
+          state: 'flying',
+          initialY: startY
+        };
+        
+        this.activeSeagulls.push(newSeagull);
+        
+        // Add some horizontal movement
+        const direction = Math.random() > 0.5 ? 1 : -1;
+        seagull.setVelocityX(direction * 50);
+        seagull.setFlipX(direction < 0);
+      }
+    }
+  }
+
+  private updateSeagulls(delta: number) {
+    this.activeSeagulls = this.activeSeagulls.filter(seagull => {
       const { sprite, state } = seagull;
       
-      if (!sprite.active) {
-        this.seagulls.splice(index, 1);
-        return;
+      // Remove if off-screen or not active
+      if (!sprite.active || sprite.x < -50 || sprite.x > this.scene.cameras.main.width + 50) {
+        sprite.destroy();
+        return false;
       }
       
-      if (state === 'flying') {
-        // Move horizontally across the screen
-        sprite.x += 2 * (delta / 10);
-        
-        // Add a gentle up/down motion
-        sprite.y = seagull.initialY + Math.sin(time / 500 + index) * 10;
-        
-        // If it flies off-screen, flip direction
-        if (sprite.x > width + 50) {
-          sprite.x = -50;
-          seagull.initialY = Phaser.Math.Between(50, this.waterLevel - 50);
-        }
-        
-        // Randomly decide to dive toward the player (5% chance every second)
-        if (time > this.lastSeagullTime + 1000 && Phaser.Math.Between(1, 100) <= 5) {
-          this.lastSeagullTime = time;
-          
-          // Only dive if player is within range
-          const distX = Math.abs(sprite.x - this.player.x);
-          if (distX < 200) {
+      // State machine for seagull behavior
+      switch (state) {
+        case 'flying':
+          // Randomly decide to dive
+          if (Math.random() < 0.005) {
             seagull.state = 'diving';
-            seagull.target = { 
-              x: this.player.x, 
-              y: this.player.y
+            // Target near the player
+            seagull.target = {
+              x: this.player.x + Phaser.Math.Between(-50, 50),
+              y: this.player.y + Phaser.Math.Between(-30, 30)
             };
             
-            // Change animation to diving
-            sprite.play('seagull_dive');
+            // Calculate angle and velocity to dive toward target
+            const angle = Phaser.Math.Angle.Between(
+              sprite.x, sprite.y,
+              seagull.target.x, seagull.target.y
+            );
+            
+            const speed = 200;
+            sprite.setVelocity(
+              Math.cos(angle) * speed,
+              Math.sin(angle) * speed
+            );
+            
+            // Flip based on direction
+            sprite.setFlipX(Math.cos(angle) < 0);
           }
-        }
-      }
-      else if (state === 'diving') {
-        const target = seagull.target!;
-        
-        // Move toward the target position
-        const dx = target.x - sprite.x;
-        const dy = target.y - sprite.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance > 5) {
-          sprite.x += dx * 0.05;
-          sprite.y += dy * 0.05;
-        }
-        
-        // If seagull went below water and didn't catch player, return to flying
-        if (sprite.y >= this.waterLevel + 100) {
-          seagull.state = 'returning';
-          seagull.target = { 
-            x: sprite.x + Phaser.Math.Between(-100, 100), 
-            y: seagull.initialY 
-          };
+          break;
           
-          // Change animation back to flying
-          sprite.play('seagull_fly');
-        }
+        case 'diving':
+          // Check if reached target or water
+          if (sprite.y > this.waterLevel + 100 || 
+              (seagull.target && Phaser.Math.Distance.Between(
+                sprite.x, sprite.y,
+                seagull.target.x, seagull.target.y) < 10)) {
+            
+            seagull.state = 'returning';
+            
+            // Head back up
+            const returnAngle = Phaser.Math.Angle.Between(
+              sprite.x, sprite.y,
+              sprite.x, seagull.initialY
+            );
+            
+            const returnSpeed = 150;
+            sprite.setVelocity(
+              sprite.body.velocity.x * 0.3,  // Keep some horizontal movement
+              Math.sin(returnAngle) * returnSpeed
+            );
+          }
+          break;
+          
+        case 'returning':
+          // Once back above water, return to flying
+          if (sprite.y <= seagull.initialY) {
+            seagull.state = 'flying';
+            sprite.y = seagull.initialY;
+            
+            // Reset to normal flying velocity
+            const direction = sprite.flipX ? -1 : 1;
+            sprite.setVelocity(direction * 50, 0);
+          }
+          break;
       }
-      else if (state === 'returning') {
-        const target = seagull.target!;
-        
-        // Move back up to flying height
-        const dx = target.x - sprite.x;
-        const dy = target.y - sprite.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance > 5) {
-          sprite.x += dx * 0.03;
-          sprite.y += dy * 0.03;
-        }
-        else {
-          seagull.state = 'flying';
-          seagull.initialY = sprite.y;
-        }
-      }
+      
+      return true;
     });
+  }
+
+  getSeagulls(): Phaser.Physics.Arcade.Group {
+    return this.seagulls;
   }
 }
