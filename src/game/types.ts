@@ -1,5 +1,4 @@
-
-import Phaser from 'phaser';
+import Phaser from "phaser";
 
 export interface FishermanWithBoat {
   boat: Phaser.GameObjects.Image;
@@ -11,7 +10,14 @@ export interface FishermanWithBoat {
 
 export interface Obstacle {
   sprite: Phaser.Physics.Arcade.Sprite;
-  type: 'coral' | 'stone' | 'plant';
+  type:
+    | "coral"
+    | "stone"
+    | "plant1"
+    | "plant2"
+    | "plant3"
+    | "plant4"
+    | "plant5";
 }
 
 export interface BackgroundFish {
@@ -22,12 +28,12 @@ export interface BackgroundFish {
 
 export interface PowerUp {
   sprite: Phaser.Physics.Arcade.Sprite;
-  type: 'speed' | 'invincibility' | 'eat';
+  type: "speed" | "invincibility" | "eat";
   active: boolean;
 }
 
 export interface ActivePowerUp {
-  type: 'speed' | 'invincibility' | 'eat';
+  type: "speed" | "invincibility" | "eat";
   duration: number;
   startTime: number;
   indicator?: Phaser.GameObjects.Image;
@@ -35,7 +41,7 @@ export interface ActivePowerUp {
 
 export interface Seagull {
   sprite: Phaser.Physics.Arcade.Sprite;
-  state: 'flying' | 'diving' | 'returning';
-  target?: { x: number, y: number };
+  state: "flying" | "diving" | "returning";
+  target?: { x: number; y: number };
   initialY: number;
 }
