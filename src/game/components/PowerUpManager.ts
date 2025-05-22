@@ -1,4 +1,3 @@
-
 import Phaser from 'phaser';
 import { PowerUp, ActivePowerUp } from '../types';
 import { POWERUP_DURATION, POWERUP_SPAWN_CHANCE } from '../config';
@@ -57,6 +56,7 @@ export class PowerUpManager {
       if (powerUp.x < -50) {
         this.powerUps.remove(powerUp, true, true);
       }
+      return true; // Return true to continue iteration
     });
     
     // Calculate current effects

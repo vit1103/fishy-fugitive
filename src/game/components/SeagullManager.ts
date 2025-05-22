@@ -8,11 +8,16 @@ export class SeagullManager {
   private seagulls: Seagull[] = [];
   private player: Phaser.Physics.Arcade.Sprite;
   private lastSeagullTime: number = 0;
+  private seagullsGroup: Phaser.Physics.Arcade.Group;
 
   constructor(scene: Phaser.Scene, player: Phaser.Physics.Arcade.Sprite, waterLevel: number) {
     this.scene = scene;
     this.player = player;
     this.waterLevel = waterLevel;
+    
+    // Create seagulls group
+    this.seagullsGroup = this.scene.physics.add.group();
+    this.scene.seagulls = this.seagullsGroup;
     
     // Add initial seagulls
     this.addSeagull();
@@ -36,8 +41,7 @@ export class SeagullManager {
     seagull.setScale(0.8);
     
     // Add to seagulls group for collision detection
-    const seagullsGroup = this.scene.seagulls as Phaser.Physics.Arcade.Group;
-    seagullsGroup.add(seagull);
+    this.seagullsGroup.add(seagull);
     
     this.seagulls.push({
       sprite: seagull,
