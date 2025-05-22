@@ -52,7 +52,7 @@ export class MainScene extends Phaser.Scene {
     });
     
     // Load background music
-    this.load.audio('background-music', '/src/assets/background-music.mp3');
+    //this.load.audio('background-music', '/src/assets/background-music.mp3');
   }
 
   create() {
