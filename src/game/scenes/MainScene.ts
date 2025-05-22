@@ -60,11 +60,11 @@ export class MainScene extends Phaser.Scene {
     this.lastDifficultyIncrease = 0;
     
     // Play background music
-    this.backgroundMusic = this.sound.add('background-music', {
-      volume: 0.5,
-      loop: true
-    });
-    this.backgroundMusic.play();
+    // this.backgroundMusic = this.sound.add('background-music', {
+    //   volume: 0.5,
+    //   loop: true
+    // });
+    // this.backgroundMusic.play();
     
     this.waterLevel = this.cameras.main.height / 2;
     
