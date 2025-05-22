@@ -1,6 +1,7 @@
 
 import Phaser from 'phaser';
 import { Seagull } from '../types';
+import { spriteAnimations } from '../assets';
 
 export class SeagullManager {
   private scene: Phaser.Scene;
@@ -43,6 +44,11 @@ export class SeagullManager {
         seagull.setScale(0.8);
         seagull.setSize(40, 20);
         seagull.setOffset(20, 20);
+        
+        // Play seagull animation
+        if (spriteAnimations.seagull && spriteAnimations.seagull.key) {
+          seagull.play(spriteAnimations.seagull.key);
+        }
         
         // Store as an active seagull with state information
         const newSeagull: Seagull = {

@@ -51,6 +51,7 @@ const FishyEscape: React.FC = () => {
       };
 
       const handleGameOver = (event: CustomEvent) => {
+        console.log("Game over event received", event.detail);
         const { score, time } = event.detail;
         setGameOver(true);
         setScore(score);
@@ -276,7 +277,7 @@ const FishyEscape: React.FC = () => {
       )}
 
       {gameOver && (
-        <div className="absolute inset-0 flex items-center justify-center z-10">
+        <div className="absolute inset-0 flex items-center justify-center z-20">
           <Card className="w-[90%] max-w-md bg-white/10 backdrop-blur-md border-white/20 shadow-xl animate-scale-up">
             <div className="p-8 text-center">
               <h1 className="text-3xl font-bold text-white mb-2">Game Over</h1>
@@ -319,7 +320,7 @@ const FishyEscape: React.FC = () => {
                 </Button>
 
                 <Button
-                  onClick={handleHome} // Updated to use handleHome
+                  onClick={handleHome}
                   variant="ghost"
                   className="text-white hover:bg-white/10 rounded-full transition-all duration-300"
                 >
