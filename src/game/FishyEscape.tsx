@@ -54,6 +54,7 @@ const FishyEscape: React.FC = () => {
         console.log("Game over event received", event.detail);
         const { score, time } = event.detail;
         setGameOver(true);
+        setGameStarted(false);
         setScore(score);
         setTime(time);
         setLeaderboard(getLeaderboard());
